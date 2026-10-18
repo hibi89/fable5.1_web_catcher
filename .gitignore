@@ -4,3 +4,9 @@ __pycache__/
 *.pyc
 out/
 *.egg-info/
+.env
+.env.*
+!.env.example
+llm_payload.preview.json
+llm_report.json
+llm_report.md
