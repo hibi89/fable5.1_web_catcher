@@ -1,3 +1,12 @@
+# 2026-10-19 KST — p3 CDP fail-closed 원인 코드 작업 인수
+
+- 3회×8건 localhost Chromium 조사: `DecodedLengthTracker.decide`의 `no_cdp_match` **4/8, 5/8, 3/8**; 500ms 대기만으로 사라지지 않음. 별도 이벤트 listener 검사는 데이터를 수집하지 못했으므로 **frame ID vs CDP 전달 vs request-key mapping 원인 확정 불가**. [PR #14](https://github.com/hibi89/fable5.1_web_catcher/pull/14) diagnostic-only closed unmerged.
+- **[PR #15](https://github.com/hibi89/fable5.1_web_catcher/pull/15) main merge `f6cf9577941fff829cab0b827b5b95fd7e8eac88`**, verified source `385851177b20339c167957d2579bb2a18694b804`. `scanner/cdp_decoded_size.py`의 `refusal_reason(request)`가 값 없는 고정 원인 enum만 산출하고 `scanner/record_scan.py`가 `compressed_decoded_unavailable`인 승인 JSON에 한해 `cdp_decoded_diagnostic` 저장. 원본 URI/요청 ID/응답값/인증정보/원시 헤더 미저장. **성공률/메모리 상한/필터 변경 없음**.
+- CI **Windows 99/99 PASS** [39145907566](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39145907566); **Chromium 23/23 PASS + 공개 smoke 4/4** [39145907594](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39145907594). 초기 gzip positive test 22/23에서 기존 안전 거부를 실패로 간주하였던 fixture를 수정, 성공 시 타입 구조 검증·거부 시 원문 null 및 진단 enum 검증을 유지.
+- 근거 `docs/STEP3_CDP_MISMATCH_DIAGNOSTICS_2026-10-19.md`. 사용자 Windows 필터/차트/API 인과 후보 실증 및 실제 OpenAI API smoke 미실시. 다음 `ㄱ`은 이슈 재실행보다 **CDP 미매칭 발생 이유를 깊게 추적할 별도 명확한 접근** 또는 실제 현장 Record로 한 단위 진행. 현재 제품 전체 완료율 변동 없음; Step1~4 원본 자동/Mock 인수 4/4 그대로.
+
+---
+
 # 2026-10-19 KST — p3 Step 4 공식 SDK 오프라인 HTTP 인수
 
 - 다음 `ㄱ` 진행 결과: 실제 OpenAI Python SDK를 설치한 상태에서 `httpx2.MockTransport`로 모든 요청을 메모리 내부에서 종료하는 end-to-end 테스트를 7개 추가. **실제 OpenAI API 0회, 비용 0**. `responses.create` POST, JSON schema strict, 도구 미제공, `store=false`, 개인정보 정제, 400/401/429/500 retry 1회 상한, refusal/incomplete 및 usage 읽기 확인.
