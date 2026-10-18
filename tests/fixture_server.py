@@ -107,6 +107,29 @@ class FixtureHandler(BaseHTTPRequestHandler):
             </script></body></html>""".replace("__PORT__", str(self.server.server_port))
             self._dynamic_response(page.encode("utf-8"), "text/html; charset=utf-8")
             return
+        if path == "/runtime-css-bars":
+            # CSS-only percent-height bars with no chart library, plus a
+            # decorative tiny SVG. The hash must select the dashboard view.
+            page = """<!doctype html><html><body>
+            <svg width="18" height="18" viewBox="0 0 18 18">
+              <path d="M1 1 L17 17"/><rect width="4" height="4"/>
+            </svg>
+            <script>
+              if (location.hash === '#v-dash') {
+                const bars=document.createElement('div');
+                bars.className='bars';
+                bars.style.cssText='display:flex;align-items:flex-end;width:440px;height:130px';
+                for (const pct of [25,45,55,35,73,52,91,60]) {
+                  const bar=document.createElement('div');
+                  bar.className='bar';
+                  bar.setAttribute('style','width:16px;height:'+pct+'%');
+                  bars.appendChild(bar);
+                }
+                document.body.appendChild(bars);
+              }
+            </script></body></html>"""
+            self._dynamic_response(page.encode(), "text/html; charset=utf-8")
+            return
         if path == "/runtime-charts":
             # Explicit test-only library stubs, not real third-party distributions.
             page = """<!doctype html><html><body>
