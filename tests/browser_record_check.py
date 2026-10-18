@@ -26,6 +26,26 @@ from tests.fixture_server import FixtureHandler
 class RecordHandler(FixtureHandler):
     def do_GET(self):
         path = self.path.split('?', 1)[0]
+        if path == '/gz-prefix':
+            # Repeated small rows produce >128KiB decoded JSON, yet the first
+            # complete row is early enough for a bounded 32KiB prefix hint.
+            obj = {'date': 'PRIVATE_DATE_VALUE', 'value': 14,
+                   'token': 'BODY_SECRET_VALUE', 'quality': True}
+            data = {'items': [obj] * 12000}
+            compressed = gzip.compress(json.dumps(data).encode())
+            self.protocol_version = 'HTTP/1.1'
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Encoding', 'gzip')
+            self.send_header('Transfer-Encoding', 'chunked')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            for pos in range(0, len(compressed), 256):
+                block = compressed[pos:pos + 256]
+                self.wfile.write(f'{len(block):X}\r\n'.encode() + block + b'\r\n')
+            self.wfile.write(b'0\r\n\r\n')
+            self.wfile.flush()
+            return
         if path in ('/gz-small', '/gz-large'):
             if path == '/gz-small':
                 data = {'points': [{'date': 'PRIVATE_DATE', 'value': 14,
@@ -512,3 +532,36 @@ def test_real_headed_approved_gzip_without_length_bounded_by_decoded_bytes():
             saved = json.dumps(output)
             for secret in ('REDACT_ME', 'PRIVATE_DATE', 'BODY_SECRET'):
                 assert secret not in saved
+
+
+def test_headed_oversized_gzip_records_partial_field_hints_only():
+    with serve_record() as dashboard, serve_record() as external:
+        output = blank_result(dashboard)
+        called = set()
+        def interact(context, pages, elapsed, stop):
+            if called:
+                return
+            called.add(1)
+            pg = context.pages[0]
+            pg.evaluate('u => fetch(u).then(r => r.json()).then(x => x.items.length)',
+                        external + '/gz-prefix?access_token=QUERY_SECRET_VALUE')
+            pg.wait_for_timeout(350)
+            stop.set()
+        assert run_record(dashboard+'/record', output, timeout=8,
+                          allow_origin=[external], max_duration=14,
+                          stop_event=threading.Event(), test_hook=interact) is False
+    api = next(r for r in output['api']['endpoints'] if r['url'].endswith('/gz-prefix'))
+    assert api['response_body_analysis'] == 'decoded_too_large'
+    assert api['json_structure'] is None
+    sample = api.get('json_prefix_structure')
+    assert sample is not None, api
+    assert sample['completeness'] == 'partial_prefix_only'
+    assert sample['sample_kind'] == 'first_complete_object'
+    assert sample['fields'] == {
+        'date': 'string', 'value': 'number',
+        '[REDACTED_KEY]': 'string', 'quality': 'boolean'
+    }
+    assert output['api'].get('chart_candidates', []) == []
+    dumped = json.dumps(output, ensure_ascii=False)
+    for secret in ('PRIVATE_DATE_VALUE', 'BODY_SECRET_VALUE', 'QUERY_SECRET_VALUE'):
+        assert secret not in dumped

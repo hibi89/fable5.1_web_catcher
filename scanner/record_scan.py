@@ -15,6 +15,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 from .bundle_scan import BundleCollector, _origin
 from .cdp_decoded_size import DecodedLengthTracker
+from .json_prefix_hints import MAX_PREFIX_HINTS
 from .chart_mapping import map_chart_api_candidates
 from .connections import ConnectionCollector
 from .network import NetworkCollector
@@ -132,9 +133,10 @@ class ScopedNetworkCollector(NetworkCollector):
         self.pages = pages
         self.event_count = 0
         self.omitted = 0
-        self.decoded_tracker = DecodedLengthTracker(
-            lambda url: origin_string(url) in self.origins
-            and not _AUTH_PATH.search(urlsplit(url).path))
+        permitted = lambda url: (origin_string(url) in self.origins
+                                and not _AUTH_PATH.search(urlsplit(url).path))
+        self.decoded_tracker = DecodedLengthTracker(permitted, capture_prefix=True)
+        self._prefix_hints = 0
 
     def on_request(self, request):
         if request.resource_type not in ('xhr', 'fetch'):
@@ -209,6 +211,21 @@ class ScopedNetworkCollector(NetworkCollector):
                     else 'compressed_decoded_unavailable')
                 self._body_queue.pop(request, None)
         super().flush_completed()
+        # Do not promote sampled prefix structure into full JSON structure.
+        # Only mark oversized, explicitly approved JSON responses and only
+        # if their CDP stream completed. No raw response values are stored.
+        for request, row in list(self._request_rows.items()):
+            if self._prefix_hints >= MAX_PREFIX_HINTS:
+                break
+            if (row['response_body_analysis'] != 'decoded_too_large'
+                    or row.get('json_prefix_structure') is not None
+                    or row.get('status') != 200
+                    or not row.get('content_type', '').endswith(('json', '+json'))):
+                continue
+            hint = self.decoded_tracker.hint_for(request)
+            if hint is not None:
+                row['json_prefix_structure'] = hint
+                self._prefix_hints += 1
 
     def finalize(self):
         self.flush_completed()

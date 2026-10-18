@@ -169,6 +169,12 @@ def to_markdown(result: dict) -> str:
                 entry_lines.append(
                     "  - 구조: `" + json.dumps(item["json_structure"], ensure_ascii=False) + "`"
                 )
+            if item.get("json_prefix_structure") is not None:
+                entry_lines.append(
+                    "  - **부분 샘플 필드(전체 JSON 구조 아님, 연관 API 추정 근거 아님)**: `"
+                    + json.dumps(item["json_prefix_structure"]["fields"], ensure_ascii=False)
+                    + "`"
+                )
         if len(endpoints) > 40:
             entry_lines.append(f"- 표시 생략: {len(endpoints)-40}건 (JSON에는 기록됨)")
         entry_lines.extend(["", "연결 시각(밀리초)은 UTC epoch 기준이며 향후 차트 관찰과 비교하기 위한 값입니다.",
