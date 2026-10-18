@@ -37,6 +37,7 @@ def test_unique_numeric_timeseries_structure_after_response_candidate_only():
     assert link["chart_id"] == "chart-001"
     assert link["endpoint_id"] == "api-0001"
     assert link["status"] == "candidate_only"
+    assert "numeric_timeseries_structure" in link["reasons"]
     assert link["time_delta_ms"] == 100
     assert 0.55 <= link["confidence"] <= 0.65
     assert "single_observation_no_repeated_consistency" in link["limitations"]

@@ -73,12 +73,13 @@ def to_markdown(result: dict) -> str:
                            f"- 후보 수: {len(guesses)}건",
                            f"- 경합으로 연결 보류: {mapping.get('ambiguous_charts_unlinked', 0)}건",
                            "- 시간 근접만으로 연결하지 않고 JSON 구조·DOM 마커·속성 갱신을 함께 확인합니다.",
-                           "- 반복 일관성 검증 없음. confidence는 확률이 아닌 휴리스틱 점수입니다.", ""]
+                           "- 반복 일관성 검증 없음. confidence는 확률이 아닌 휴리스틱 점수입니다.",
+                           "- 초기 HTML 또는 인라인 스크립트에 내장된 데이터가 차트를 생성했을 가능성도 있습니다.", ""]
         for guess in guesses[:40]:
             candidate_lines.extend([
                 f"- {guess['chart_id']} ↔ {guess['endpoint_id']} · confidence {guess['confidence']:.3f}"
                 f" · 시간 차이 {guess['time_delta_ms']}ms · {guess['status']}",
-                "- 근거: " + ", ".join(guess["evidence"]),
+                "- 근거: " + ", ".join(guess["reasons"]),
                 "- 한계: " + ", ".join(guess["limitations"]),
             ])
         candidate_lines.append("")

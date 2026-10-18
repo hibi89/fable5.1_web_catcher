@@ -115,6 +115,7 @@ def map_chart_api_candidates(result: dict) -> None:
             "confidence": confidence,
             "status": "candidate_only",
             "evidence": list(REASONS),
+            "reasons": list(REASONS),
             "time_delta_ms": delta,
             "limitations": list(LIMITATIONS),
         }
