@@ -205,3 +205,11 @@ Chromium fixture: python -m pytest -q tests/browser_runtime_check.py
 api.candidates에는 chart_id, endpoint_id, candidate_only 상태, 비확률적 confidence(0.55~0.65), 근거 및 한계를 보관합니다. charts[].data_sources는 후보 endpoint ID를 가리킵니다. 실제 데이터 연결의 증명이 아니며 반복 일관성도 검증하지 않았습니다. 추가 API 호출이나 원본 응답 저장은 없습니다.
 
 테스트: `python -m pytest -q`와 `python -m pytest -q tests/browser_runtime_check.py tests/browser_mapping_check.py`. 번들 단서 및 전체 Step 2 검증은 이후 별도 단위입니다.
+
+## Step 2 — 단위 6: 이미 로드된 JS 번들의 미검증 API 문자열 후보
+
+브라우저가 실제로 로드한 **같은 출처**의 JavaScript 응답 중 MIME/상태/Content-Length와 requestfinished가 확인된 응답만 분석합니다. 새로운 요청·경로 탐색은 실행하지 않습니다. JS 파일당 128KiB, 최대 12개 파일/스크립트별 15개 및 전체 30개 후보로 제한합니다. 크기 불명·미완료·교차 출처 JS는 본문을 읽지 않습니다.
+
+짧고 제한된 따옴표 문자열 중 API/GraphQL 경로만 추출해 query/민감 경로를 버리고 `api.bundle_candidates`에 `unverified_string_literal`/observed_request=false로 저장합니다. 실제 `api.endpoints`의 관찰 결과와 다르며, JS 문자열이 실제 사용된 API를 의미하지 않습니다. 원본 JS·코드 스니펫·쿼리 비밀값은 저장하지 않습니다. 압축 응답 처리의 메모리 절대 상한은 보장하지 못합니다.
+
+테스트: `python -m pytest -q` 및 `python -m pytest -q tests/browser_runtime_check.py tests/browser_mapping_check.py tests/browser_bundle_check.py`. 실사이트 정확도·사용자 PC·Step 2 최종 통합/보안 검증은 다음 단위입니다.
