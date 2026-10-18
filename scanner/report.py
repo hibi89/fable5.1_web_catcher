@@ -67,6 +67,22 @@ def to_markdown(result: dict) -> str:
             f"- XHR/fetch 응답 관찰 수: {runtime.get('xhr_fetch_responses_seen', 0)}",
             "- 알려진 차트 라이브러리 전역/DOM 후보만 탐지합니다. 차트↔API 연관·번들 문자열 분석은 아직 미구현입니다.", "",
         ]
+        mapping = runtime.get("mapping_analysis", {})
+        guesses = result["api"]["candidates"]
+        candidate_lines = ["## 차트↔API 연관 후보 (확정 아님)", "",
+                           f"- 후보 수: {len(guesses)}건",
+                           f"- 경합으로 연결 보류: {mapping.get('ambiguous_charts_unlinked', 0)}건",
+                           "- 시간 근접만으로 연결하지 않고 JSON 구조·DOM 마커·속성 갱신을 함께 확인합니다.",
+                           "- 반복 일관성 검증 없음. confidence는 확률이 아닌 휴리스틱 점수입니다.", ""]
+        for guess in guesses[:40]:
+            candidate_lines.extend([
+                f"- {guess['chart_id']} ↔ {guess['endpoint_id']} · confidence {guess['confidence']:.3f}"
+                f" · 시간 차이 {guess['time_delta_ms']}ms · {guess['status']}",
+                "- 근거: " + ", ".join(guess["evidence"]),
+                "- 한계: " + ", ".join(guess["limitations"]),
+            ])
+        candidate_lines.append("")
+        lines[lines.index("## 한계 및 주의"):lines.index("## 한계 및 주의")] = candidate_lines
         tech = runtime.get("technologies", [])
         charts = result.get("charts", [])
         chart_lines = ["## 런타임 기술 근거 및 차트 DOM 후보", "",
