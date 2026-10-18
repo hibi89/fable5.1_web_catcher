@@ -12,12 +12,16 @@
 - 데이터 모델: `api.endpoints` 실제 요청, `api.connections` 실제 WS/SSE, `api.candidates` JS 문자열 미검증 후보, `api.chart_candidates` 차트 연관 후보 및 `charts[].data_sources` ID 참조. 기존 정적 결과의 3개 api 키는 불변.
 - 대안 선택: URL/probing·CDP 원시 추적보다 Playwright 사전 리스너와 완료된 응답 재사용 방식이 비용·보안·유지보수 우위. 추가 인증·사이트 조작·LLM 호출 없음.
 
+추가 실사이트 개선(2026-10-18): 사용자 제공 공개 대시보드 URL의 #v-dash가 Chromium 탐색에서 손실되는 것을 발견해 브라우저 내 fragment 유지(결과 비저장)로 수정. generic SVG를 연결 DOM/100×70px 이상/도형 2개 이상일 때만 후보로 유지해 작은 아이콘을 억제. CSS의 서로 다른 퍼센트 높이/너비를 가진 반복 bar 그룹(4개 이상)을 css_bar_pattern_candidate(library unknown/confidence 0.5)로 추가. 실사이트 실제 실행: HTTP 200, XHR/fetch 2, 기존 차트 후보 14~15개에서 3개(큰 SVG 2 + CSS 막대 그룹 1), 에러 0. chart↔API 연결은 근거 부족으로 0. docs/DASHBOARD_LIVE_ACCURACY_2026-10-18.md에 증거 정리.
+
 ## ③ 테스트 명령·실제 성공/실패·미검증
 - Windows 2022 Python 3.11: `python -m pytest -q` → **55/55 PASS**, run `39120274152`.
 - Ubuntu 24.04 실제 Playwright Chromium: `python -m pytest -q tests/browser_runtime_check.py tests/browser_mapping_check.py tests/browser_bundle_check.py tests/browser_final_check.py` → **11/11 PASS**, run `39120274247`.
 - 같은 Ubuntu 러너 공개 홈페이지 smoke: `python -m pytest -q -s tests/public_runtime_smoke.py` → **4/4 PASS**, example.com/python.org 각각 정적·런타임에서 HTTP 200/exit 0·결과 구조 검사.
 - 최종 검증 소스 SHA: `e743e8c2b208940e66e03cfd6fc799031d7cc337`. 문서 HEAD는 검증 후 추가 변경으로 별도 재조회. 완료 기준 9개 및 한계 `docs/STEP2_FINAL_ACCEPTANCE.md`.
 - 실제 상용 차트 라이브러리 통합은 일부 명시적 stub, 모든 실사이트 정확도·사용자의 Windows headed는 **미검증**.
+
+실사이트 확장 검증: Windows Python3.11 57/57 PASS (run 39123343492), Ubuntu Chromium 12/12 PASS (run 39123322129), 대상 사이트 일회성 read-only 진단 PASS (run 39123343463). 검증 기능 HEAD b7c707386034a14c44820709b4a13388dfcf7e7e. 후속 커밋은 문서 변경만. 실제 전체 대시보드의 모든 시각화 탐지율과 데이터 lineage는 미검증.
 
 ## ④ 완료·진행·대기·차단·중단점
 원본 Step 1 완료 및 Step 2 9/9 완료. **필수 남은 구현 없음.** 사용자 추가 요청이 없는 한 다음 단위 자동 개발·배포하지 않음. 실사이트 범위 확장, 실제 차트/라이브러리 정확도 검증, 배포는 별도 요청·승인 필요.
@@ -38,7 +42,7 @@
 사용자 첨부 fable5.1_step1.txt/fable5.1_step2.txt가 최종 요구 원본. GitHub main이 코드 기준, git history로 복구 가능, 강제 push 금지. tests/test_static.py.bak 보존. API token, URL 인증 쿼리, cookie, raw response/JS, HAR, storage state, 비밀 로그 저장 금지. 로그인·WAF 우회·임의 경로 probing 금지.
 
 ## ⑨ 다음 작업 우선순위·완료 기준·승인
-**Step 2는 9/9 완료 판정.** 향후 더 높은 실제 사이트 정확도/사용자 로컬headed/서버 배포는 새 범위로 취급하고 사용자 지시를 받은 뒤 시작. 배포 시 보안 격리·SSRF·리소스 상한을 새로 설계해야 한다. 지금 단계에서 추가 개발·배포 필수 작업 없음.
+**Step 2는 원본 기준 9/9 완료 판정.** 첫 실사이트 정확도 개선까지 별도 확인했지만 모든 차트 형식의 완전한 탐지나 사용자 Windows 최신 개선 코드 설치는 입증하지 않았음. 향후 더 높은 실제 사이트 정확도/사용자 로컬headed/서버 배포는 새 범위로 취급하고 사용자 지시를 받은 뒤 시작. 배포 시 보안 격리·SSRF·리소스 상한을 새로 설계해야 한다. 지금 단계에서 추가 개발·배포 필수 작업 없음.
 
 ## ⑩ 갱신 일시·검증 범위·문서 기준 커밋
 2026-10-18 KST. 최종 CI run 39120274152 (Windows 55 PASS), 39120274247 (Chromium 11 + 공개 사이트 4 PASS), 소스 SHA e743e8c2b208940e66e03cfd6fc799031d7cc337. 문서 커밋 HEAD 및 중앙 BOOK.md 갱신은 최종 재조회 확인 후 상태 보고. 실제 사이트 전체 탐지 정확도와 사용자 개인 PC는 미검증.
