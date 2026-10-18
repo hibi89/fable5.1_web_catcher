@@ -1,3 +1,12 @@
+# 2026-10-18 사용자 업로드 후속 판정 — 새 실사이트 재시험 미확인
+
+- 사용자가 추가 제출한 `result(2).json`은 직전 `result(1).json`과 바이트 단위로 완전히 동일 (SHA-256 `f47e088964ee947c7c3daf6be90d66565190ccb94f868491450036e2d1a29d0f`).
+- JSON 내부 시작/종료 UTC: `2026-10-18T12:29:14`~`12:30:01`; 47.344초, 사용자 조작 총 228건, 실제 고유 조작 식별자 75건, 중복 초과 153건. 차트 4건 중 동일 id 중복 1건. 마지막 URL null. allowed_origins는 대시보드 하나이며 외부 API response_body_analysis는 `scope_or_auth_body_excluded`.
+- 이는 **수정 전 동일 실행 결과**를 다시 첨부한 것으로, PR #2 병합 이후 Windows 실사이트 테스트가 성공 또는 실패했다는 새 근거는 아님. 자동 테스트 PASS 근거는 기존 문서대로 유지. STEP 3 실사이트 최종 검증 **보류**.
+- 다음 검수는 로컬 최신 `main`을 `git rev-parse --short HEAD`로 확인 후 새 `--out ./out/record-after-fix`로 실행한 **그 경로의** `result.json`을 제출받을 것. 결과 파일이 새 실행 시간/명시적 API origin/고유 클릭을 포함하는지 재검토.
+
+---
+
 # Step 3 실제 사용자 대시보드 피드백 반영 (2026-10-18)
 
 - 기존 Step 1/2 및 Step 3 CLI MVP 통과 상태 유지.
