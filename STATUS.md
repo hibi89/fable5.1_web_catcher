@@ -1,3 +1,14 @@
+# 2026-10-18 22:44 KST — p3 다음 1단위 구현, CI 차단으로 병합 대기
+
+- `r`을 한글 자판의 `ㄱ`으로 해석해 다음 범위 단위 시작: 일반 SVG와 CSS bar 그룹의 기하적 변화 단서 수집.
+- PR #4 (branch `fix/step3-generic-chart-change-evidence-20261018`): https://github.com/hibi89/fable5.1_web_catcher/pull/4, 기능 SHA `48312f0e6a7a21d138f083af9194e57d7b651ae1`, 문서 SHA `2cc411bb4fd309a541ef1b9b8204427bae8af31b`.
+- 코드: SVG path/d/geometry/childList 변화 시각과 분류형 change_evidence, CSS bar 퍼센트 그룹의 동일 요소 내 모양 변화 비교, 무의미한 호버 이벤트 제외, 수집 값/스타일 원문 미저장, generic chart의 무근거 API 매핑 금지.
+- 비브라우저 V8 JS 문법 검사와 모의 DOM에서 CSS baseline→변화, SVG class-only→geometry-change 분기 확인. **Python/Chromium CI는 PASS 아님.** PR 호출된 Windows `39132765417` 및 Chromium `39132765458` 실패, job steps 0개/로그 BlobNotFound. Windows 1회 재실행도 작업 단계 시작 전 실패. 해당 오류를 코드 테스트 실패로 확정할 근거 없음.
+- 검증 전 변경을 `main`에 병합하지 않았다. 기존 PR #3 코드 및 CI 63/20/4 PASS 그대로 유지. **이번 단위 상태: 구현과 모의 JS 검증 완료, CI 실제 회귀 검증 차단, 병합 보류.**
+- branch 문서: `docs/STEP3_GENERIC_CHART_GEOMETRY_PENDING_2026-10-18.md`. 다음 실행은 GitHub Actions runner/계정 상태 확인 또는 동일 소스의 직접 Python·Chromium 회귀 검증이 우선. 사용자 Windows 테스트 반복 불필요.
+
+---
+
 # Step 3 후속 단위: 헤더 없는 JSON 안전 구조 수집 추가 (2026-10-18 22:30 KST)
 
 - **PR #3 main 병합 완료**: `f7b9bb9c09bc69cd305519b5676af31ff4b2d7ea` / 검증 기능 `dc5992391b399e29bcf6167daf455676e3c15ca7`. 사용자 Windows Record에서 외부 JSON이 `size_unknown`으로 제외됐던 원인에 대응.
