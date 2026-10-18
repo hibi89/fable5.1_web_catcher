@@ -6,6 +6,9 @@ on:
     paths:
       - 'scan.py'
       - 'scanner/runtime_scan.py'
+      - 'scanner/network.py'
+      - 'tests/fixture_server.py'
+      - 'tests/test_network.py'
       - 'tests/browser_runtime_check.py'
       - '.github/workflows/runtime-python311.yml'
   workflow_dispatch:

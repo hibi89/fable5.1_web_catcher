@@ -1,6 +1,8 @@
 """Local fake web service for offline tests: NOT a real public website."""
 from __future__ import annotations
 
+import json
+import time
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
@@ -11,8 +13,63 @@ class FixtureHandler(BaseHTTPRequestHandler):
         # Prevent logging query credentials even in the fixture process.
         return
 
+    def _dynamic_response(self, body: bytes, mime: str, *, declared: bool = True):
+        self.send_response(200)
+        self.send_header("Content-Type", mime)
+        if declared:
+            self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_POST(self):
+        path = self.path.split("?", 1)[0]
+        if path == "/graphql":
+            # Deliberately ignore the request body; tests verify it is never persisted.
+            body = json.dumps({"data": {"status": "GRAPHQL_DATA_PRIVATE"}}, separators=(",", ":")).encode()
+            self._dynamic_response(body, "application/json; charset=utf-8")
+            return
+        self.send_error(404)
+
     def do_GET(self):
         path = self.path.split("?", 1)[0]
+        if path == "/runtime-network":
+            page = """<!doctype html><html><body><div>API test fixture</div><script>
+            setTimeout(() => {
+              fetch('/api/chart?access_token=CHART_URL_PRIVATE');
+              fetch('/api/noise?token=NOISE_URL_PRIVATE');
+              fetch('/api/plain');
+              fetch('/api/badjson');
+              fetch('/api/large');
+              fetch('/api/unknown');
+              fetch('/graphql?api_key=GRAPHQL_URL_PRIVATE', {
+                method:'POST', headers:{'content-type':'application/json'},
+                body:JSON.stringify({query:'query { value }',variables:{token:'POST_BODY_PRIVATE'}})
+              });
+            }, 30);
+            </script></body></html>"""
+            self._dynamic_response(page.encode(), "text/html; charset=utf-8")
+            return
+        if path.startswith("/api/"):
+            if path == "/api/chart":
+                time.sleep(0.06)
+                obj = {"data": [{"date": "DATE_VALUE_PRIVATE", "value": 312,
+                                 "password": "PASSWORD_VALUE_PRIVATE"}],
+                       "api_key": "KEY_VALUE_PRIVATE"}
+                self._dynamic_response(json.dumps(obj).encode(), "application/json")
+            elif path == "/api/noise":
+                time.sleep(0.065)
+                self._dynamic_response(b'{"logs":[{"message":"NOISE_VALUE_PRIVATE"}]}', "application/json")
+            elif path == "/api/plain":
+                self._dynamic_response(b"PLAIN_PRIVATE", "text/plain")
+            elif path == "/api/badjson":
+                self._dynamic_response(b"not valid json PRIVATE_BAD", "application/json")
+            elif path == "/api/large":
+                self._dynamic_response(b'{"data":"' + b"x" * 131100 + b'"}', "application/json")
+            elif path == "/api/unknown":
+                self._dynamic_response(b'{"value":"UNKNOWN_SIZE_PRIVATE"}', "application/json", declared=False)
+            else:
+                self.send_error(404)
+            return
         if path == "/redirect":
             self.send_response(302)
             self.send_header("Location", "/next?access_token=REDIRECT_PRIVATE&mode=test")

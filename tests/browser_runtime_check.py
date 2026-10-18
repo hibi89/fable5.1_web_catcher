@@ -43,3 +43,42 @@ def test_real_chromium_cli_flags_on_local_fixture(tmp_path):
     assert data['scan_mode'] == 'runtime'
     assert data['target']['status_code'] == 200
     assert data['runtime']['domcontentloaded_observed'] is True
+
+
+def test_real_chromium_observed_network_metadata(tmp_path):
+    from urllib.parse import urlsplit
+
+    with fixture_server() as url:
+        code = scan(url + '/runtime-network?token=PAGE_URL_PRIVATE',
+                    tmp_path, timeout=15, runtime=True, wait=1.5)
+    data = json.loads((tmp_path / 'result.json').read_text(encoding='utf-8'))
+    report = (tmp_path / 'report.md').read_text(encoding='utf-8')
+    assert code == 0, data['warnings']
+    assert data['scan_mode'] == 'runtime'
+    assert data['runtime']['scope'] == 'network_metadata_only'
+    endpoints = data['api']['endpoints']
+    assert len(endpoints) >= 7, endpoints
+    rows = {urlsplit(item['url']).path: item for item in endpoints}
+    for path in ('/api/chart', '/api/noise', '/api/plain', '/api/badjson',
+                 '/api/large', '/api/unknown', '/graphql'):
+        assert path in rows
+        assert rows[path]['status'] == 200
+        assert rows[path]['request_started_at_ms'] <= rows[path]['response_received_at_ms']
+    assert rows['/api/chart']['json_structure'] == {
+        'data': [{'date': 'string', 'value': 'number', '[REDACTED_KEY]': 'string'}],
+        '[REDACTED_KEY]': 'string'}
+    assert rows['/api/noise']['json_structure'] == {'logs': [{'message': 'string'}]}
+    assert rows['/api/plain']['response_body_analysis'] == 'non_json'
+    assert rows['/api/badjson']['response_body_analysis'] == 'invalid_json'
+    assert rows['/api/large']['response_body_analysis'] == 'too_large'
+    assert rows['/api/unknown']['response_body_analysis'] == 'size_unknown'
+    assert rows['/graphql']['method'] == 'POST'
+    assert rows['/graphql']['graphql_candidate'] is True
+    assert data['api']['candidates'] == [] and data['api']['connections'] == []
+    assert data['charts'] == []
+    saved = (tmp_path / 'result.json').read_text(encoding='utf-8') + report
+    for secret in ('PAGE_URL_PRIVATE', 'CHART_URL_PRIVATE', 'NOISE_URL_PRIVATE',
+                   'GRAPHQL_URL_PRIVATE', 'POST_BODY_PRIVATE', 'DATE_VALUE_PRIVATE',
+                   'PASSWORD_VALUE_PRIVATE', 'KEY_VALUE_PRIVATE', 'NOISE_VALUE_PRIVATE',
+                   'UNKNOWN_SIZE_PRIVATE', 'GRAPHQL_DATA_PRIVATE'):
+        assert secret not in saved

@@ -51,11 +51,11 @@ def to_markdown(result: dict) -> str:
         lines[0] = "# Fable 5.1 Web Catcher — 런타임 브라우저 관찰 보고서"
         for i, line in enumerate(lines):
             if line.startswith("- 분석 모드:"):
-                lines[i] = "- 분석 모드: `runtime` — Chromium DOMContentLoaded 및 제한 관찰(실행 기반만 구현)"
+                lines[i] = "- 분석 모드: `runtime` — Chromium DOMContentLoaded 및 실제 XHR/fetch 요청·응답 구조 관찰"
             elif line.startswith("- 정적 GET 1페이지"):
                 lines[i] = "- 격리 브라우저로 페이지만 열고 제한적으로 스크롤했습니다. 로그인·클릭·폼 제출은 하지 않았습니다."
             elif line.startswith("- Step 1의 API"):
-                lines[i] = "- 현재 Step 2 단위 1에서는 API·차트 연관 분석이 아직 비활성화되어 있습니다."
+                lines[i] = "- Step 2 단위 2에서 XHR/fetch API 정보만 수집하며 차트 연관 분석은 아직 비활성화되어 있습니다."
         runtime = result.get("runtime", {})
         index = lines.index("## 한계 및 주의")
         lines[index:index] = [
@@ -63,10 +63,32 @@ def to_markdown(result: dict) -> str:
             f"- DOMContentLoaded: {runtime.get('domcontentloaded_observed', False)}",
             f"- 추가 대기(초): {runtime.get('wait_seconds', 0)}",
             f"- 스크롤: {runtime.get('scroll_steps', 0)}회",
-            f"- XHR/fetch 요청 관찰 수(메타데이터 미저장): {runtime.get('xhr_fetch_requests_seen', 0)}",
-            f"- XHR/fetch 응답 관찰 수(메타데이터 미저장): {runtime.get('xhr_fetch_responses_seen', 0)}",
-            "- API 엔드포인트·차트·번들 문자열 분석은 아직 구현하지 않았습니다.", "",
+            f"- XHR/fetch 요청 관찰 수: {runtime.get('xhr_fetch_requests_seen', 0)}",
+            f"- XHR/fetch 응답 관찰 수: {runtime.get('xhr_fetch_responses_seen', 0)}",
+            "- 차트·WebSocket·SSE·번들 문자열 분석은 아직 구현하지 않았습니다.", "",
         ]
+        endpoints = result["api"]["endpoints"]
+        entry_lines = ["## 실제 관찰된 XHR/fetch API (추정 경로 탐색 아님)", "",
+                       f"- 관찰된 요청 수: {len(endpoints)}건",
+                       "- JSON 구조는 값이 아닌 자료형만 보관. 응답 크기 불명/초과는 분석하지 않음.", ""]
+        for item in endpoints[:40]:
+            entry_lines.append(
+                f"- `{item['id']}` {item['method']} `{item['url']}` "
+                f"HTTP {item['status'] if item['status'] is not None else '미수신'}"
+                f" · {item['content_type'] or 'unknown'}"
+                f" · JSON 처리: {item['response_body_analysis']}"
+                f" · GraphQL 후보: {item['graphql_candidate']}"
+            )
+            if item["json_structure"] is not None:
+                entry_lines.append(
+                    "  - 구조: `" + json.dumps(item["json_structure"], ensure_ascii=False) + "`"
+                )
+        if len(endpoints) > 40:
+            entry_lines.append(f"- 표시 생략: {len(endpoints)-40}건 (JSON에는 기록됨)")
+        entry_lines.extend(["", "연결 시각(밀리초)은 UTC epoch 기준이며 향후 차트 관찰과 비교하기 위한 값입니다.",
+                            "서로 가까운 요청도 차트 데이터 소스로 확정하지 않습니다.", ""])
+        index = lines.index("## 한계 및 주의")
+        lines[index:index] = entry_lines
     lines.extend([f"- {safe_text(w)}" for w in result["warnings"]] or ["- 없음"])
     return "\n".join(lines) + "\n"
 

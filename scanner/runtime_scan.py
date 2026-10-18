@@ -1,13 +1,14 @@
 """Isolated Chromium runtime navigation scaffold (Step 2, unit 1).
 
-Network payload inspection, library detection and chart mapping are deliberately
-not enabled here. Subsequent units extend this browser observation boundary.
+Observed XHR/fetch metadata and bounded value-free JSON structures are enabled.
+Chart library detection and chart mapping remain out of scope.
 """
 from __future__ import annotations
 
 from urllib.parse import urlsplit
 
 from .sanitize import safe_url
+from .network import NetworkCollector
 
 # Installed by Playwright BEFORE navigation, to observe page timings only.
 # No site state, forms, cookies, or storage are changed by this script.
@@ -62,11 +63,11 @@ def scan_runtime_page(url: str, result: dict, *, timeout: float, wait: float, he
         'domcontentloaded_observed': False,
         'wait_seconds': wait,
         'scroll_steps': 0,
-        'scope': 'navigation_only',
+        'scope': 'network_metadata_only',
         'xhr_fetch_requests_seen': 0,
         'xhr_fetch_responses_seen': 0,
     }
-    warnings.append('Step 2 부분 구현: API 요청·차트·런타임 기술 탐지는 아직 수집하지 않습니다.')
+    warnings.append('Step 2 부분 구현: XHR/fetch 메타데이터만 수집. WebSocket·SSE·차트·번들은 아직 미구현입니다.')
     try:
         from playwright.sync_api import Error as BrowserError
         from playwright.sync_api import TimeoutError as BrowserTimeoutError
@@ -88,16 +89,8 @@ def scan_runtime_page(url: str, result: dict, *, timeout: float, wait: float, he
                 page.set_default_timeout(int(timeout * 1000))
                 # Register before any navigation, including redirect and early events.
                 page.add_init_script(_INIT_OBSERVER)
-                def observed_request(request):
-                    if request.resource_type in ('fetch', 'xhr'):
-                        result['runtime']['xhr_fetch_requests_seen'] += 1
-
-                def observed_response(response):
-                    if response.request.resource_type in ('fetch', 'xhr'):
-                        result['runtime']['xhr_fetch_responses_seen'] += 1
-
-                page.on('request', observed_request)
-                page.on('response', observed_response)
+                network = NetworkCollector(result)
+                network.attach(page)
                 try:
                     response = page.goto(url, wait_until='domcontentloaded', timeout=int(timeout * 1000))
                     result['runtime']['domcontentloaded_observed'] = True
@@ -121,6 +114,14 @@ def scan_runtime_page(url: str, result: dict, *, timeout: float, wait: float, he
                             result['target']['stylesheets'] = _script_urls(page, 'link[rel~=stylesheet][href]', 'href')
                     except Exception:
                         warnings.append('브라우저 DOM 일부 메타데이터 조회 실패')
+                    try:
+                        network.finalize()
+                        result['runtime']['xhr_fetch_requests_seen'] = len(result['api']['endpoints'])
+                        result['runtime']['xhr_fetch_responses_seen'] = sum(
+                            item['response_received_at_ms'] is not None for item in result['api']['endpoints']
+                        )
+                    except Exception:
+                        warnings.append('네트워크 응답 구조 분석 오류: 기록된 endpoint만 보존')
             except BrowserError:
                 warnings.append('Chromium 실행 실패: python -m playwright install chromium 명령으로 설치를 확인하세요.')
                 fatal = True
