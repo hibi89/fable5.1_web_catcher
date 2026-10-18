@@ -23,3 +23,8 @@
 원본: 대화 첨부 `fable5.1_step2.txt`. Chromium + Playwright로 실행 관찰, XHR/fetch·WebSocket/SSE 연결의 메타데이터, JSON 구조, 런타임 차트 라이브러리, 차트↔API **연관 후보**, 현재 로드된 동일 origin JS 번들 문자열을 근거로 분석한다. 비밀값·원본 응답·storage state·HAR 저장 금지. 자동 로그인·클릭·폼 제출·우회·무작위 API 탐색 금지. Step 1의 정적 분석은 그대로 유지한다.
 
 **Step 2 원본 완료 기준 9/9 PASS (2026-10-18).** 단위 1~6 구현 후 최종 통합/보안 fixture 검증과 실제 공개 홈페이지 2곳 정적·런타임 구조 검사 완료. 관찰 API=api.endpoints, WebSocket/SSE=api.connections, JS 문자열 미검증 경로=api.candidates (source_script, discovered_by=bundle_string), 차트↔API 연관 후보=api.chart_candidates로 분리. 번들 최대 10개·파일당 128KiB, 원본 코드/데이터 저장 금지. 실제 상용 차트 라이브러리 정확도·사용자 PC/임의 사이트 성능·서버 SSRF 차단은 범위/검증 밖. 상세 근거 docs/STEP2_FINAL_ACCEPTANCE.md.
+
+
+## Step 3 사용자 원본 요구 (2026-10-18 제공 파일 5 .1_step3.txt)
+
+사용자가 직접 로그인·클릭·필터 변경하는 로컬 headed Record. --record, --max-duration 기본 900초, 반복 --allow-origin, --runtime과 중복 실행 금지 및 기존 CLI 보존. Enter·Ctrl+C·시간 만료·브라우저 종료 처리. 입력 감시 스레드가 종료 신호만 보내고 Playwright 생성 스레드는 이벤트를 처리함. Step 2의 네트워크·차트·JS 번들 수집기를 재사용하며 원본 자료형 분석·크기 제한 유지. 탭·문서 ID, 허용 origin 격리, iframe 미지원 경고, click/change의 시각·구조적 selector만 허용. 키입력·폼값·쿠키·인증 정보·원문·HAR·스크린샷·세션 저장 금지. 긴 수집의 건수/메모리 상한과 생략 경고. 회귀 및 실제 Chromium 테스트 확인 전 Step 3 완료 주장 금지. LLM·웹 UI·로그인 자동화·세션 재사용 금지.
