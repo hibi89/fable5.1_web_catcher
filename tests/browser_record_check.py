@@ -26,8 +26,8 @@ from tests.fixture_server import FixtureHandler
 class RecordHandler(FixtureHandler):
     def do_GET(self):
         path = self.path.split('?', 1)[0]
-        if path in ('/cross-api-gzip-chunked', '/cross-api-gzip-chunked-large'):
-            if path == '/cross-api-gzip-chunked':
+        if path in ('/gz-small', '/gz-large'):
+            if path == '/gz-small':
                 data = {'points': [{'date': 'PRIVATE_DATE', 'value': 14,
                                     'password': 'BODY_SECRET'}]}
             else:
@@ -477,9 +477,9 @@ def test_real_headed_approved_gzip_without_length_bounded_by_decoded_bytes():
     from scanner.network import MAX_JSON_BYTES
     # Same manual Record scope; all network actions originate from local fixture.
     for endpoint, permitted, expected in [
-        ('/cross-api-gzip-chunked', False, 'scope_or_auth_body_excluded'),
-        ('/cross-api-gzip-chunked', True, 'structure_only'),
-        ('/cross-api-gzip-chunked-large', True, 'decoded_too_large'),
+        ('/gz-small', False, 'scope_or_auth_body_excluded'),
+        ('/gz-small', True, 'structure_only'),
+        ('/gz-large', True, 'decoded_too_large'),
     ]:
         with serve_record() as dashboard, serve_record() as external:
             output = blank_result(dashboard)
