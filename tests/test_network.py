@@ -12,20 +12,29 @@ class FakeRequest:
     resource_type = 'fetch'
     method = 'GET'
 
-    def __init__(self, url):
+    def __init__(self, url, *, transfer_bytes=None, size_error=False):
         self.url = url
+        self.transfer_bytes = transfer_bytes
+        self.size_error = size_error
+
+    def sizes(self):
+        if self.size_error:
+            raise RuntimeError('measurement unavailable')
+        return {} if self.transfer_bytes is None else {'responseBodySize': self.transfer_bytes}
 
 
 class FakeResponse:
     status = 200
 
-    def __init__(self, request, body, *, mime='application/json', declared=None):
+    def __init__(self, request, body, *, mime='application/json', declared=None, encoding=None):
         self.request = request
         self._body = body
         self.body_calls = 0
         self.headers = {'content-type': mime}
         if declared is not None:
             self.headers['content-length'] = str(declared)
+        if encoding:
+            self.headers['content-encoding'] = encoding
 
     def body(self):
         self.body_calls += 1
@@ -109,3 +118,68 @@ def test_bounded_request_list_and_mime_graphql():
     assert _length({'content-length': 'unknown'}) is None
     assert _is_graphql('https://example.test/graphql', None)
     assert not _is_graphql('https://example.test/api/data', 'application/json')
+
+
+def test_missing_content_length_uses_finished_measured_bytes_only():
+    result = blank_result('https://example.test')
+    collector = NetworkCollector(result)
+    body = json.dumps({'points': [{'date': 'SENSITIVE_DATE',
+                                    'value': 14, 'token': 'SENSITIVE_TOKEN'}]}).encode()
+    req = FakeRequest('https://example.test/api/chunked?key=PRIVATE',
+                      transfer_bytes=len(body))
+    response = FakeResponse(req, body)
+    collector.on_request(req)
+    collector.on_response(response)
+    row = result['api']['endpoints'][0]
+    assert row['response_body_analysis'] == 'waiting_for_finished_size_check'
+    collector.flush_completed()
+    assert response.body_calls == 0
+    collector.on_finished(req)
+    assert row['response_body_analysis'] == 'ready'
+    collector.finalize()
+    assert row['response_body_analysis'] == 'structure_only'
+    assert row['json_structure'] == {'points': [{'date': 'string', 'value': 'number',
+                                                 '[REDACTED_KEY]': 'string'}]}
+    assert response.body_calls == 1
+    serialized = json.dumps(result)
+    for secret in ('SENSITIVE_DATE', 'SENSITIVE_TOKEN', 'PRIVATE'):
+        assert secret not in serialized
+
+
+def test_missing_length_rejects_large_compressed_or_unmeasurable_body_without_read():
+    for transfer_bytes, encoding, size_error, expected in [
+        (MAX_JSON_BYTES + 1, None, False, 'too_large'),
+        (123, 'gzip', False, 'compressed_size_unknown'),
+        (123, 'br', False, 'compressed_size_unknown'),
+        (None, None, True, 'size_unknown'),
+        (None, None, False, 'size_unknown'),
+    ]:
+        data = blank_result('https://example.test')
+        c = NetworkCollector(data)
+        req = FakeRequest('https://example.test/api/test',
+                          transfer_bytes=transfer_bytes, size_error=size_error)
+        response = FakeResponse(req, b'{"password":"SENSITIVE"}', encoding=encoding)
+        c.on_request(req)
+        c.on_response(response)
+        c.on_finished(req)
+        c.finalize()
+        row = data['api']['endpoints'][0]
+        assert row['response_body_analysis'] == expected
+        assert row['json_structure'] is None
+        assert response.body_calls == 0
+        assert 'SENSITIVE' not in json.dumps(data)
+
+
+def test_missing_length_measurement_underreports_but_decoded_body_exceeds_limit():
+    data = blank_result('https://example.test')
+    collector = NetworkCollector(data)
+    req = FakeRequest('https://example.test/api/chunked', transfer_bytes=32)
+    response = FakeResponse(req, b'{' + b' ' * MAX_JSON_BYTES + b'}')
+    collector.on_request(req)
+    collector.on_response(response)
+    collector.on_finished(req)
+    collector.finalize()
+    row = data['api']['endpoints'][0]
+    assert row['response_body_analysis'] == 'decoded_too_large'
+    assert row['json_structure'] is None
+    assert response.body_calls == 1
