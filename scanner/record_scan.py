@@ -334,24 +334,67 @@ def run_record(url: str, result: dict, *, timeout: float,
                 return
             page_id = f'page-{len(pages)+1:03d}'
             state = {'page_id': page_id, 'navigation_id': 'nav-000',
-                     'frame_id': page_id + '-main', 'document_key': None}
+                     'frame_id': page_id + '-main', 'document_key': None,
+                     'document_time_origin': None, 'last_document_url': None}
             pages[page] = state
             conn.attach_page(page)
             def navigated(frame):
                 nonlocal docs_count
                 if frame != page.main_frame:
                     return
+                address = frame.url
+                in_scope = origin_string(address) in origins
+                # Playwright fires framenavigated for hash/history changes too.
+                # performance.timeOrigin is constant for a living JS document;
+                # it changes on a true document load. Never inspect off-scope JS.
+                document_origin = None
+                if in_scope:
+                    try:
+                        document_origin = frame.evaluate("performance.timeOrigin")
+                    except BrowserError:
+                        pass
+                last_origin = state.get('document_time_origin')
+                last_url = state.get('last_document_url')
+                url_without_hash = address.split('#', 1)[0]
+                same_document = (
+                    state['document_key'] is not None and
+                    ((document_origin is not None and last_origin is not None
+                      and document_origin == last_origin) or
+                     (document_origin is None and last_url == url_without_hash
+                      and in_scope))
+                )
+                # A pushState() route can change the path without loading a
+                # document. The timeOrigin check above preserves its identity.
+                if same_document:
+                    if page_id == 'page-001':
+                        result['target']['final_url'] = record_safe_url(address)
+                    return
                 docs_count += 1
                 state['navigation_id'] = f'nav-{docs_count:04d}'
                 state['document_key'] = page_id + ':' + state['navigation_id'] if docs_count <= MAX_DOCUMENTS else None
+                state['document_time_origin'] = document_origin
+                state['last_document_url'] = url_without_hash
+                if page_id == 'page-001':
+                    result['target']['final_url'] = record_safe_url(address)
                 if len(record['pages']) >= MAX_DOCUMENTS:
                     record['omitted_events']['documents'] += 1
                     return
                 record['pages'].append({
                     'page_id': page_id, 'navigation_id': state['navigation_id'],
-                    'frame_id': state['frame_id'], 'url': record_safe_url(frame.url),
-                    'allowed': origin_string(frame.url) in origins})
+                    'frame_id': state['frame_id'], 'url': record_safe_url(address),
+                    'allowed': in_scope})
+
+            def document_ready():
+                if origin_string(page.url) not in origins:
+                    return
+                try:
+                    # A full navigation callback can precede an evaluable JS
+                    # context; fill its token before any subsequent hash route.
+                    state['document_time_origin'] = page.evaluate('performance.timeOrigin')
+                except BrowserError:
+                    pass
             page.on('framenavigated', navigated)
+            page.on('domcontentloaded', document_ready)
         context.on('page', on_page)
         page = context.new_page()
         on_page(page)
@@ -385,10 +428,23 @@ def run_record(url: str, result: dict, *, timeout: float,
                     local = {'charts': [], 'runtime': {}, 'frontend': [], 'evidence': []}
                     collect_runtime_charts(pg, local)
                     for c in local['charts']:
-                        c['id'] = state['page_id'] + '-' + state['navigation_id'] + '-' + c['id']
+                        chart_key = (key, c['selector'], c['library'])
+                        if chart_key in seen:
+                            c['id'] = seen[chart_key]['id']
+                        else:
+                            existing_charts = [k for k in seen
+                                               if isinstance(k, tuple) and len(k) == 3]
+                            if len(existing_charts) >= 80:
+                                if not result['runtime'].get('record_chart_limit_warning'):
+                                    result['warnings'].append('Record 차트 후보 80건 상한: 신규 차트 생략')
+                                    result['runtime']['record_chart_limit_warning'] = True
+                                continue
+                            local_count = sum(k[0] == key for k in existing_charts)
+                            c['id'] = (state['page_id'] + '-' + state['navigation_id']
+                                       + f'-chart-{local_count + 1:03d}')
                         c.update(page_id=state['page_id'], navigation_id=state['navigation_id'],
                                  frame_id=state['frame_id'])
-                        seen[(key, c['selector'], c['library'])] = c
+                        seen[chart_key] = c
                     for item in local['runtime'].get('technologies', []):
                         if not any(t['name'] == item['name'] for t in result['runtime']['technologies']):
                             result['runtime']['technologies'].append(item)
