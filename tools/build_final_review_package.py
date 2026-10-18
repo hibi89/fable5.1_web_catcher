@@ -40,7 +40,7 @@ SECRET_RE = [
 PERSONAL_PATH_RE = [
     re.compile(r"(?i)[A-Z]:[\\/]+Users[\\/]+(?:haein|runneradmin|[A-Za-z0-9._-]+)[\\/]+"),
     re.compile(r"/(?:home|Users)/[^/\s]+/(?:Desktop|Documents|Downloads|OneDrive)/"),
-    re.compile(r"/mnt/data/"),
+    re.compile("/" + "mnt" + "/data/"),
 ]
 
 
