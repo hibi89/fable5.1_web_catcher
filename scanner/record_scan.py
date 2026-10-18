@@ -417,7 +417,9 @@ def run_record(url: str, result: dict, *, timeout: float,
                 except BrowserError:
                     pass
 
-        reason[:] = ['max_duration']
+        # Preserve an early terminal Enter/EOF delivered during browser startup.
+        if not stop.is_set():
+            reason[:] = ['max_duration']
         if not fatal:
             try:
                 while True:
