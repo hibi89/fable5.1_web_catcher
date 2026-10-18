@@ -369,6 +369,9 @@ def run_record(url: str, result: dict, *, timeout: float,
 
         def snapshot():
             nonlocal has_iframe_warning
+            # Responses must be summarized while their document is still alive.
+            if net is not None:
+                net.flush_completed()
             for pg, state in list(pages.items()):
                 if pg.is_closed() or origin_string(pg.url) not in origins:
                     continue
