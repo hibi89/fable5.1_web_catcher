@@ -353,3 +353,69 @@ python scan.py --from-result ./out/demo/result.json --llm --model "실제_MODEL_
 `pytest -q`는 실제 유료 API를 절대 호출하지 않는 **mock/fixture 테스트**입니다. **실제 OpenAI API smoke는 별도 opt-in**으로 사용자 본인 키·모델 지정과 `--llm` 호출 시에만 수행하며 사용량에 따른 비용이 발생할 수 있습니다. 자동 CI에서는 실제 API 키를 주입하지 않습니다.
 
 **Step 4 기능은 프런트엔드 복제·웹 UI·자동 코드 생성이 아닙니다.** DB/서버를 실제 조사했다고 주장하지 않으며, 프리랜서 재구현 제안은 원사이트 기술과 엄격히 분리합니다.
+
+
+## Step 5 — URL 배치 / 저장 결과 비교 / 관찰 기반 데이터 계약
+
+Step 5는 기존 Step 1~4 스캔·규칙·보고서 구조를 재사용하는 **로컬 CLI 확장**입니다. 웹 UI, DB, Docker, 큐 서버, 병렬 실행, 자동 로그인/인증 우회는 포함하지 않습니다. **배치·비교·계약 생성은 LLM API를 호출하지 않습니다.** 본인 소유 또는 분석 권한이 있는 공개 URL만 사용하세요.
+
+### 1) UTF-8 URL 목록 순차 배치
+
+`urls.txt` 파일:
+```text
+# 분석 권한이 있는 사이트만
+https://example.com
+https://example.org/dashboard
+https://example.net/docs
+```
+
+실행:
+```powershell
+python scan.py --batch urls.txt --out ./out/batch
+python scan.py --batch urls.txt --runtime --wait 10 --out ./out/batch-runtime
+python scan.py --batch urls.txt --delay 3 --max-urls 50 --out ./out/batch-other
+```
+
+- 한 번에 **1 URL**씩, 기본 URL 사이 2초 간격(최소 1초), 고유 URL 상한 기본 50·설정 최대 500. HTTP/HTTPS만 허용. fragment는 비교 키에서 제외하되 path/query의 원래 내용과 순서는 메모리에서만 유지합니다. 민감 쿼리/내부 host/path는 manifest·요약·개별 보고서에 일반화합니다. 상세 URL 식별이 필요한 경우 사용자가 원본 입력 파일에서 확인합니다.
+- `--batch --record`, `--batch --llm`, `--batch --llm-dry-run`, `--batch --allow-origin`은 **명확한 오류**입니다. 각 runtime URL은 기존 `scan()`의 새로운 격리 Chromium 실행을 사용하며 쿠키/세션을 공유하지 않습니다.
+- `batch_manifest.json`, `batch_summary.json`, `batch_report.md`, `targets/001-site/result.json`, `targets/001-site/report.md` 등을 만듭니다. 폴더명과 식별번호에 원본 사이트 이름·쿼리·식별자 값을 쓰지 않습니다. 정상/경고 포함 부분 성공/실패/중단/같은 origin 429 이후 skipped를 구별합니다.
+- 각 대상 전후 상태를 임시 파일+atomic replace로 저장합니다. **기존 폴더를 덮어쓰지 않습니다.** Ctrl+C 시 현재 대상 interrupted/나머지 pending, 기존 성공 결과를 보존합니다. 자동 resume은 지원하지 않습니다. 실패/잘못된 입력이 하나라도 있으면 종료코드 2, 모두 성공(비치명적 경고 포함)이면 0, 사용자 중단은 130입니다.
+- 403/429 우회나 공격적 재시도는 없습니다. **429 이후 같은 origin의 후속 URL은 건너뜁니다.** 서버별 Retry-After 값을 추가 네트워크 호출로 조사하지 않습니다.
+- 보안 강화로 배치 폴더의 개별 결과는 원래 Step 1~4 `result.json`보다 더 많은 필드·원문을 숨깁니다. 폴더의 익명화한 `result.json`은 일반 보고·기초 비교용이며 정확한 서버 URL이나 원본 근거를 복원하기 위한 용도가 아닙니다. 원래 스캔의 권한 범위와 한도는 보존합니다.
+
+### 2) 두 저장된 결과 비교 (네트워크/LLM 0회)
+
+```powershell
+python scan.py --compare old/result.json new/result.json --out ./out/diff
+```
+
+`diff.json`, `diff.md`에 기술(카테고리/버전/confidence/근거 소스), 요청 method+origin+일반화 path, JSON 타입/구조, 차트 라이브러리/개수/연관 후보 수와 수집 범위 경고를 기록합니다. 시간, evidence ID, 차트 selector/id와 배열 순서의 차이만으로 변경되었다고 판정하지 않습니다.
+
+- 같은 대상이면 **'이번에 관찰되지 않음'**이고 실제 삭제가 아닙니다.
+- 다른 대상이면 **'A에만/B에만 관찰'**로 표시하며 시간 변화 표현을 피합니다.
+- 익명화된 원본/구버전 필드 누락 등으로 동일 대상 판정이 불확실하면 unknown 처리합니다.
+- 같은 원래 origin 이외의 API를 경로가 비슷하다는 이유로 합치지 않습니다. 동적 id를 일반화하면서 경로가 충돌하면 ambiguous로 표시합니다. 관찰된 JSON 차이는 공식 서버 breaking change 확증이 아닙니다.
+
+### 3) 이미 관찰한 JSON 구조 → 참고 데이터 계약
+
+```powershell
+python scan.py --from-result ./out/demo/result.json --export-contracts
+python scan.py --from-result ./out/demo/result.json --export-contracts --out ./out/separate-contracts
+```
+
+기본 출력: `./out/demo/contracts/contracts.json`, `contracts.md`, `contracts/schemas/endpoint-001.schema.json` 등. **새 API 요청·원본 값 복원·LLM 호출 없음.** JSON Schema Draft 2020-12의 관찰 기반 참고 스키마를 만듭니다.
+
+- status/content-type별로 다른 variant를 보존하고, 동일 variant의 기존 JSON 구조 표본만 값 없이 병합합니다. 타입 충돌은 `anyOf`, null 별도 타입, 빈 배열/요소 미관찰은 `items: {}`. 필드 존재 빈도를 확인할 수 없는 기존 결과는 `unknown`.
+- `required`, `additionalProperties:false`, 실제 값 기반 `enum/default/examples`, 정당화되지 않은 숫자 범위·날짜 형식·단위를 생성하지 않습니다. 128KiB 크기 제한으로 미분석된 응답이나 부분 prefix는 전체 서버 스키마로 승격하지 않습니다.
+- `contracts.md`는 후보 배열 데이터 경로/문자열·수치·시간 이름 후보만 표시하며, 실제 범주 의미나 x/y 축·단위·집계 방식을 확정하지 않습니다.
+- 결과 파일 최대 6MB, `schema_version=1.0` 또는 버전 없는 구형 출력만 수용합니다. 지원하지 않는 버전과 이미 있는 출력 폴더는 명시적으로 오류 처리합니다.
+
+### Step 5 로컬 검사 및 알려진 한계
+
+```powershell
+python -m pip install -r requirements.txt
+python -m pytest -q
+python -m pytest -q tests/test_batch.py tests/test_compare.py tests/test_contracts.py
+```
+
+배치 기능은 각 사이트에 실제로 연결되므로 허가된 URL에서만 실행하세요. 비교/계약 기능은 디스크의 두 결과만 처리하며 외부 네트워크를 사용하지 않습니다. 기존 JSON 구조 요약 자체가 제한된 표본이므로 실제 API의 `required`/validation/호환성은 알 수 없습니다. 개인정보를 정규식만으로 완벽히 익명화한다고 보장하지 않으며, 민감 자료를 외부 공유하기 전 확인하세요. Step 3의 CDP 이벤트 수집 성공률 문제 및 Step 4의 실제 유료 OpenAI 호출 미검증은 별도로 유지됩니다.
