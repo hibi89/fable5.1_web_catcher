@@ -127,7 +127,11 @@ def validate_llm_output(raw, payload):
         *(s for e in raw["chart_api_assessments"] for s in
           (e["explanation"], e["caveats"])),
     ]
-    for name in _catalog():
+    sensitive_technology_names = _catalog() | {
+        "Spring Boot", "Node.js", "FastAPI", "Flask", "PostgreSQL",
+        "MySQL", "MongoDB", "Redis", "Kubernetes", "Docker",
+    }
+    for name in sensitive_technology_names:
         if name.lower() in permitted or len(name) <= 3:
             continue
         # Only explicit product-like names with token boundaries; false positives
