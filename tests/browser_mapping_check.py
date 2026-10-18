@@ -91,6 +91,7 @@ def test_chart_mapping_unique_numeric_api_not_nearby_text_noise(tmp_path):
     assert marked["data_sources"] == [link["endpoint_id"]]
     assert all(not c["data_sources"] for c in data["charts"] if c["library"] == "unknown")
     assert data["runtime"]["mapping_analysis"]["repeated_consistency_checked"] is False
+    assert "차트↔API 연관 후보" in (tmp_path / "report.md").read_text(encoding="utf-8")
     output = (tmp_path / "result.json").read_text(encoding="utf-8")
     report = (tmp_path / "report.md").read_text(encoding="utf-8")
     for secret in ("PAGE_QUERY_PRIVATE", "CHART_QUERY_PRIVATE",
