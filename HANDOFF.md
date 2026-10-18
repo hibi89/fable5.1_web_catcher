@@ -1,3 +1,14 @@
+# 2026-10-19 KST — p3 Step 4 공식 SDK 오프라인 HTTP 인수
+
+- 다음 `ㄱ` 진행 결과: 실제 OpenAI Python SDK를 설치한 상태에서 `httpx2.MockTransport`로 모든 요청을 메모리 내부에서 종료하는 end-to-end 테스트를 7개 추가. **실제 OpenAI API 0회, 비용 0**. `responses.create` POST, JSON schema strict, 도구 미제공, `store=false`, 개인정보 정제, 400/401/429/500 retry 1회 상한, refusal/incomplete 및 usage 읽기 확인.
+- [PR #13](https://github.com/hibi89/fable5.1_web_catcher/pull/13) main merge **`1339baf0a76e291a8f7fea2698b053cf9351c1a2`**; tested source `42f481c821189e54c3b66b00dff17d767351b376`. 제품 코드 수정 없음. 테스트 `tests/test_llm_sdk_transport.py`, `tests/browser_record_check.py` 기대값 보완.
+- 최종 **Windows 98/98 PASS** run `39144159568`, **Chromium 23/23 PASS + 공개 smoke 4/4 PASS** run `39144159553`.
+- 초기 Chromium gzip CDP 본문 길이 관찰에서 **2회 연속 22/23**, `compressed_decoded_unavailable`이 각각 작은/큰 gzip에서 발생. 이는 브라우저 decoded length 이벤트 미확정 시 안전하게 본문을 거부하는 기존 **fail-closed** 정책으로 비밀/대용량 데이터 노출 없이 종료. 기존 fixture가 언제나 positive 성공을 강제해 과도했다. 최종 테스트는 이 보수적 거부를 **별도 상태로 인정**, 정상 구조 검출이 발생했을 때 내용 검증은 유지. **CDP 성공률 문제 자체는 해결됐다고 주장하지 말 것.**
+- 별도 `docs/STEP4_OFFICIAL_SDK_OFFLINE_2026-10-19.md` 참조. 사용자 실사이트 Record 필터 조작 검증 및 실제 OpenAI 유료 모델 smoke는 모두 미실시. 다음 `ㄱ`에서는 반복 재실행이 아니라 CDP 이벤트 누락 원인의 **값 없는 진단/정량화** 또는 Windows 사용자 현장 실증 범위를 한 단위 진행.
+- Step 1~4 전달 원본 자동/Mock 구현은 4/4 단계 통과 유지; 실제 제품 종합 %는 최종 출시 범위 미확정이라 부풀리지 않음.
+
+---
+
 # 2026-10-19 KST — Fable Web Catcher Step 4 구현/Mock 검증 후 인수
 
 - 사용자 제공 파일 `5.1_step4.txt`의 요구 Step 4 완료 기준 **10/10**을 코드/Mock·기존 회귀로 검증. [PR #12](https://github.com/hibi89/fable5.1_web_catcher/pull/12) main 병합 SHA `0fb2effcf1be3504d323231120cce70d23491d82`; 검증 소스 `3061db1b8fc7706a715975b4fe7e077eb05e3ff9`.
