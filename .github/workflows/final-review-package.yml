@@ -1,0 +1,46 @@
+name: Final review clean install and source ZIP
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/final-review-package.yml"
+      - "tools/build_final_review_package.py"
+      - "docs/WINDOWS_FINAL_CHECKLIST.md"
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  clean-review-zip:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Create a completely new Python virtual environment
+        run: python -m venv .venv-final
+      - name: Install only from repository requirements
+        run: .venv-final/bin/python -m pip install --disable-pip-version-check -r requirements.txt
+      - name: Install Chromium and required OS libraries
+        run: .venv-final/bin/python -m playwright install --with-deps chromium
+      - name: Run offline tests and create privacy-reviewed source ZIP
+        env:
+          OPENAI_API_KEY: ''
+          OPENAI_MODEL: ''
+        run: .venv-final/bin/python tools/build_final_review_package.py
+      - name: Upload single review ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: fable5-final-review-${{ github.sha }}
+          path: fable5-final-review-*.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
