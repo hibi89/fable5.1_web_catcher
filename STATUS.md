@@ -1,3 +1,13 @@
+# Step 3 후속 단위: 헤더 없는 JSON 안전 구조 수집 추가 (2026-10-18 22:30 KST)
+
+- **PR #3 main 병합 완료**: `f7b9bb9c09bc69cd305519b5676af31ff4b2d7ea` / 검증 기능 `dc5992391b399e29bcf6167daf455676e3c15ca7`. 사용자 Windows Record에서 외부 JSON이 `size_unknown`으로 제외됐던 원인에 대응.
+- 새 기능은 `--record`에서만 수행. 응답에 Content-Length가 없을 때 requestfinished 후 Playwright 전송 크기 측정, 비압축·128KiB 이하만 JSON 값 없는 구조 분석. 크기/압축/본문 건수/민감키/origin 제한 유지. 기존 `--runtime`은 헤더 없는 JSON `size_unknown` 정책 유지.
+- GitHub Actions 실제 확인: Windows Python 3.11 run **39131631123**, **63/63 PASS**. Ubuntu headed Chromium run **39131631050**, **20/20 PASS**, 보조 공개 사이트 **4/4 PASS**. 초기 CI 실패(대기열 정리·기존 Step 2 회귀·테스트 HTTP 버전)는 같은 PR에서 수정했고 최신 두 run만 합격 근거로 사용.
+- **사용자 실제 대시보드의 해당 API가 구조 분석 성공하는지는 미검증**. Playwright 본문 처리의 절대 메모리 상한 보장은 없으며 JSON이 여전히 과대/압축/구조 오류일 수 있다. CSS/SVG 차트↔API 연결 후보 0개 문제와 iframe 미지원, browser_closed 시 스냅샷 경고는 변경 안 함.
+- 상세: `docs/STEP3_HEADERLESS_JSON_BOUND_2026-10-18.md`. 다음 `ㄱ`은 별도 1단위로 generic CSS/SVG 변경 관찰 근거 보강을 검토할 수 있다. 이 단위에서 미구현.
+
+---
+
 # 2026-10-18 22:03 KST — Step 3 Windows 실제 사이트 재시험 결과 (result(3).json)
 
 - **핵심 Record 동작 및 PR #2 현장 회귀 검증 통과.** 실제 33.312초 수집, browser_closed 정상 종료, 35건 실제 click, 복합키 기준 중복 **0건**, SPA 문서 1건/nav-0001, 차트 후보 3건/ID 충돌 0건, target.final_url 기록 성공.
