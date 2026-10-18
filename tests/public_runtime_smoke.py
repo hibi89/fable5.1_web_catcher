@@ -42,8 +42,8 @@ def test_public_homepage_generates_evidence_backed_reports(site, runtime, tmp_pa
             assert all(ref in evidence for ref in item["evidence_ids"])
     if runtime:
         assert data["runtime"]["domcontentloaded_observed"] is True
-        assert isinstance(data["api"]["bundle_candidates"], list)
+        assert isinstance(data["api"]["candidates"], list)
         assert all(row["status"] == "unverified_string_literal"
-                   for row in data["api"]["bundle_candidates"])
+                   for row in data["api"]["candidates"])
     else:
         assert set(data["api"]) == {"endpoints", "candidates", "connections"}

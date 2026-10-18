@@ -80,7 +80,7 @@ def test_chart_mapping_unique_numeric_api_not_nearby_text_noise(tmp_path):
     assert result == 0, data["warnings"]
     lookup = {r["id"]: urlsplit(r["url"]).path for r in data["api"]["endpoints"]}
     assert "/data" in lookup.values() and "/noise" in lookup.values()
-    links = data["api"]["candidates"]
+    links = data["api"]["chart_candidates"]
     assert len(links) == 1, (links, data["charts"], data["api"]["endpoints"])
     link = links[0]
     assert lookup[link["endpoint_id"]] == "/data"
@@ -105,6 +105,6 @@ def test_chart_mapping_competing_timeseries_apis_abstains(tmp_path):
                     wait=1.0, runtime=True)
     data = json.loads((tmp_path / "result.json").read_text(encoding="utf-8"))
     assert code == 0, data["warnings"]
-    assert data["api"]["candidates"] == []
+    assert data["api"]["chart_candidates"] == []
     assert data["runtime"]["mapping_analysis"]["ambiguous_charts_unlinked"] >= 1
     assert all(c["data_sources"] == [] for c in data["charts"])

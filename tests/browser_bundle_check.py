@@ -77,9 +77,11 @@ def test_real_chromium_loaded_js_candidates_are_not_observed_requests(tmp_path):
     assert "/api/unused" not in hits and "/api/hidden" not in hits
     endpoints = result["api"]["endpoints"]
     assert any("/api/observed" in row["url"] for row in endpoints)
-    candidates = result["api"]["bundle_candidates"]
+    candidates = result["api"]["candidates"]
     assert [item["path"] for item in candidates] == ["/api/unused"]
     assert candidates[0]["observed_request"] is False
+    assert candidates[0]["discovered_by"] == "bundle_string"
+    assert "BUNDLE_SRC_PRIVATE" not in candidates[0]["source_script"]
     assert candidates[0]["status"] == "unverified_string_literal"
     assert result["runtime"]["bundle_scan"]["scanned_scripts"] == 1
     assert "미검증" in report
@@ -94,6 +96,6 @@ def test_real_chromium_no_api_literals_returns_empty(tmp_path):
         code = scan(url + "/empty", tmp_path, runtime=True, wait=0.1)
     result = json.loads((tmp_path / "result.json").read_text(encoding="utf-8"))
     assert code == 0, result["warnings"]
-    assert result["api"]["bundle_candidates"] == []
+    assert result["api"]["candidates"] == []
     assert result["runtime"]["bundle_scan"]["scanned_scripts"] == 1
     assert "/plain.js" in hits

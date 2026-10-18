@@ -42,7 +42,7 @@ def test_full_runtime_one_page_all_six_mechanisms(tmp_path):
     marked = [item for item in charts if item["library"] == "Highcharts"]
     assert marked and marked[0]["last_observed_update_ms"] is not None
     assert any(item["library"] == "unknown" for item in charts)
-    hypotheses = data["api"]["candidates"]
+    hypotheses = data["api"]["chart_candidates"]
     assert len(hypotheses) == 1, (hypotheses, data["api"]["endpoints"])
     chosen = hypotheses[0]
     assert observed["/api/chart"]["id"] == chosen["endpoint_id"]
@@ -58,9 +58,10 @@ def test_full_runtime_one_page_all_six_mechanisms(tmp_path):
     assert connections["sse"]["content_type"] == "text/event-stream"
 
     # Only an already loaded same-origin JS string, never an API call.
-    bundles = data["api"]["bundle_candidates"]
+    bundles = data["api"]["candidates"]
     assert [c["path"] for c in bundles] == ["/api/unused"]
     assert bundles[0]["observed_request"] is False
+    assert bundles[0]["discovered_by"] == "bundle_string"
     assert bundles[0]["status"] == "unverified_string_literal"
     assert data["runtime"]["bundle_scan"]["scanned_scripts"] == 1
 
@@ -95,5 +96,5 @@ def test_runtime_http_404_keeps_partial_json_and_report(tmp_path):
     assert result["scan_mode"] == "runtime"
     assert result["target"]["status_code"] == 404
     assert any("HTTP 404" in message for message in result["warnings"])
-    assert result["api"]["bundle_candidates"] == []
+    assert result["api"]["candidates"] == []
     assert "PAGE_404_PRIVATE" not in saved
