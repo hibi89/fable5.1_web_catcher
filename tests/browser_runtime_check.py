@@ -23,3 +23,23 @@ def test_real_chromium_local_fixture(tmp_path):
     assert data['target']['scripts']
     assert 'RUNTIME_INPUT_PRIVATE' not in (tmp_path / 'result.json').read_text(encoding='utf-8') + rendered
     assert 'SCRIPT_PRIVATE' not in (tmp_path / 'result.json').read_text(encoding='utf-8') + rendered
+
+
+def test_real_chromium_cli_flags_on_local_fixture(tmp_path):
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    out = tmp_path / 'cli'
+    with fixture_server() as url:
+        finished = subprocess.run(
+            [sys.executable, str(root / 'scan.py'), url + '/plain',
+             '--runtime', '--wait', '0.1', '--out', str(out)],
+            cwd=root, capture_output=True, text=True, timeout=30,
+        )
+    assert finished.returncode == 0, finished.stdout + finished.stderr
+    data = json.loads((out / 'result.json').read_text(encoding='utf-8'))
+    assert data['scan_mode'] == 'runtime'
+    assert data['target']['status_code'] == 200
+    assert data['runtime']['domcontentloaded_observed'] is True
