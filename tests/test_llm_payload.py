@@ -76,7 +76,8 @@ def test_bound_limits_and_drop_unreferenced_evidence():
     data["frontend"][0]["evidence_ids"].extend([f"ev_{i:03d}" for i in range(4, 100)])
     clean = build_llm_payload(data)
     assert len(clean["evidence"]) <= 45
-    assert clean["omissions"]["evidence"] > 0
+    assert clean["omissions"]["duplicate_evidence"] > 0
+    assert clean["omission_reasons"]["duplicate_evidence"]
     assert len(clean["findings"][0]["evidence_ids"]) <= 15
     existing = {x["id"] for x in clean["evidence"]}
     assert set(clean["findings"][0]["evidence_ids"]) <= existing
