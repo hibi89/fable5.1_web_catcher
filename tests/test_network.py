@@ -125,7 +125,7 @@ def test_missing_content_length_uses_finished_measured_bytes_only():
     collector = NetworkCollector(result, allow_unknown_length=True)
     body = json.dumps({'points': [{'date': 'SENSITIVE_DATE',
                                     'value': 14, 'token': 'SENSITIVE_TOKEN'}]}).encode()
-    req = FakeRequest('https://example.test/api/chunked?key=PRIVATE',
+    req = FakeRequest('https://example.test/api/chunked?access_token=PRIVATE',
                       transfer_bytes=len(body))
     response = FakeResponse(req, body)
     collector.on_request(req)
