@@ -74,6 +74,10 @@ def _redact(value, key="", origin_alias="https://batch-unknown.invalid"):
         return value if value in allowed_technologies or value == "unknown" else "unknown"
     if key == "version":
         return value if re.fullmatch(r"\d+(?:\.\d+){0,5}", value) else None
+    if key == "evidence_ids":
+        # Safe structural references must survive redaction so reports can
+        # resolve citations. Reject any user-controlled/free-text values.
+        return value if re.fullmatch(r"ev_[0-9]{1,6}", value) else "[REDACTED]"
     if key == "key":
         return masked_field(value)
     if key == "value":
