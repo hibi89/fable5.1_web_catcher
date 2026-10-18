@@ -7,7 +7,12 @@ ensure origin and auth scopes before the metadata is used for a body read.
 """
 from __future__ import annotations
 
+import base64
+import binascii
+
 from .network import MAX_JSON_BYTES
+from .json_prefix_hints import (MAX_PREFIX_BYTES, MAX_PREFIX_STREAMS,
+                                infer_prefix_fields)
 
 MAX_CDP_TRACKED_REQUESTS = 300
 
@@ -19,11 +24,13 @@ class DecodedLengthTracker:
     same-method requests on a page are ambiguous and must be excluded.
     """
 
-    def __init__(self, allow_url):
+    def __init__(self, allow_url, *, capture_prefix=False):
         self.allow_url = allow_url
+        self.capture_prefix = capture_prefix
         self._sessions = []
         self._by_page = {}
         self._total = 0
+        self._prefix_streams = 0
 
     def attach_page(self, context, page):
         try:
@@ -39,6 +46,27 @@ class DecodedLengthTracker:
         matches = {}
         self._by_page[page] = matches
         self._sessions.append(session)
+
+        def append_prefix(state, data):
+            prefix = state.get('prefix')
+            if prefix is None or state.get('prefix_invalid') or not data:
+                return
+            if not isinstance(data, str):
+                state['prefix_invalid'] = True
+                return
+            space = MAX_PREFIX_BYTES - len(prefix)
+            if space <= 0:
+                return
+            take = min(len(data), ((space + 2) // 3) * 4)
+            take -= take % 4
+            if take <= 0:
+                return
+            try:
+                chunk = base64.b64decode(data[:take], validate=True)
+            except (ValueError, binascii.Error):
+                state['prefix_invalid'] = True
+                return
+            prefix.extend(chunk[:space])
 
         def requested(event):
             if self._total >= MAX_CDP_TRACKED_REQUESTS:
@@ -60,6 +88,18 @@ class DecodedLengthTracker:
             active[ident] = state
             matches.setdefault((url, method), []).append(state)
             self._total += 1
+            if (self.capture_prefix and self._prefix_streams < MAX_PREFIX_STREAMS
+                    and event.get('type') in ('Fetch', 'XHR')):
+                self._prefix_streams += 1
+                state['prefix'] = bytearray()
+                state['prefix_invalid'] = False
+                try:
+                    answer = session.send('Network.streamResourceContent',
+                                          {'requestId': ident})
+                    state['prefix_enabled'] = True
+                    append_prefix(state, answer.get('bufferedData', ''))
+                except Exception:
+                    state['prefix_invalid'] = True
 
         def received(event):
             state = active.get(event.get('requestId'))
@@ -70,6 +110,8 @@ class DecodedLengthTracker:
                 state['invalid'] = True
                 return
             state['events'] += 1
+            if state.get('prefix_enabled'):
+                append_prefix(state, event.get('data', ''))
             # Saturate at CAP+1 to keep arithmetic bounded.
             if n > MAX_JSON_BYTES - state['decoded']:
                 state['decoded'] = MAX_JSON_BYTES + 1
@@ -118,6 +160,22 @@ class DecodedLengthTracker:
             return ('ready', state['decoded'])
         except Exception:
             return ('invalid_or_missing', None)
+
+    def hint_for(self, request):
+        """A first-object type sample only; never a complete response schema."""
+        try:
+            page = request.frame.page
+            key = (request.url, request.method)
+            matches = self._by_page.get(page, {}).get(key, ())
+            if len(matches) != 1:
+                return None
+            state = matches[0]
+            if (not state['done'] or state['failed'] or
+                    not state.get('prefix_enabled') or state.get('prefix_invalid')):
+                return None
+            return infer_prefix_fields(bytes(state.get('prefix', b'')))
+        except Exception:
+            return None
 
     def clear(self):
         self._by_page.clear()
