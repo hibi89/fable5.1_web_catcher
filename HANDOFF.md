@@ -1,3 +1,13 @@
+# Step 3 Windows 현장 재시험 검증 완료 (2026-10-18 22:03 KST)
+
+- 새 사용자 제출 `result(3).json`은 33.312초 새로운 headed Record이며 `stop_reason=browser_closed`, 클릭 35건/중복 0, SPA navigation 1, 차트 후보 3개/ID 중복 0, target.final_url 보존, 승인한 API origin 2개. PR #2 기능 수정의 실제 Windows 핵심 회귀는 통과한 것으로 판정.
+- API 자체는 200 JSON이지만 `response_body_analysis=size_unknown`이므로 JSON 구조 미분석. 차트는 generic SVG/CSS(갱신 시각 미확인)이어서 차트↔API 후보 0개. 보존된 API 완료 후 첫 클릭까지 1,539ms; 문서상 타이밍/자료형을 토대로 인과적 매핑을 만들 근거 없음. 마지막 Step 3 예시의 '필터 변경→API↔차트 연관 후보'는 이 사이트에서 미달성.
+- 경고: iframe DOM 미지원, 요청 세부 1건 생략, 사용자 browser_closed 시 TargetClosedError 스냅샷 경고(기록/종료 성공). 신규 수정으로 해결했다고 주장하지 말 것.
+- 상세 근거: `docs/STEP3_WINDOWS_REAL_SITE_VERIFICATION_2026-10-18.md` (사용자 결과 원본은 GitHub에 업로드하지 않음). 기존 Windows CI 60/60, Chromium CI 19/19, 공개 URL smoke 4/4 모두 완료 상태 유지.
+- 다음 개발 범위는 기존 수집 정책 변경 동의를 전제로 한 미확인 Content-Length의 안전 제한형 JSON 구조 인식, 그리고 CSS/SVG 차트 갱신 근거 확보. 사용자가 이 재시험을 반복할 필요 없음. 아래의 이전 '실사이트 미확인'은 과거 기록.
+
+---
+
 # Step 3 실제 사용자 Record 후속 인수인계 (2026-10-18)
 
 ## 테스트에서 확인된 현상과 원인
