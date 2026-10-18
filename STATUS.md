@@ -1,3 +1,16 @@
+# 2026-10-18 23:37 KST — PR #4 SVG/CSS 변경 증거 보강 검증 완료 및 main 병합
+
+- **p3 다음 1단위 완료**. [PR #4](https://github.com/hibi89/fable5.1_web_catcher/pull/4) `main` 병합 SHA `67e72529be4d5e6a190d7c63fc0c840878301965`; 브랜치 검증 소스 `30a59be00d473a1040d67aa0d3166f41b70f5e70`.
+- 원인: Private Actions 사용량 초과로 기존 Windows `39132765417`·Chromium `39132765458`가 job steps 0개로 실패했음. 저장소 Public 전환 후 작업 단계가 정상 실행됨.
+- 최종 CI **Windows 65/65 PASS** [39136596883](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39136596883), **실제 headed Chromium 21/21 PASS + 공개 사이트 smoke 4/4 PASS** [39136596876](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39136596876).
+- 새 기능: 일반 SVG의 선/도형/기하 속성 및 자식 구조 변경, CSS bar 그룹의 길이 변화 증거를 UTC ms와 제한된 `change_evidence`로 기록. 호버 클래스 변화는 일반 SVG 갱신으로 간주하지 않음. CSS bar 숫자는 브라우저 문서 안에서만 임시 비교, 값/원본/스타일은 결과에 비저장.
+- 이전 스냅샷의 정상 chart 갱신 시각을 유지하고 보고서에 변화 증거 구분 표시. **API↔차트 실제 인과관계/확정 데이터 계보 추정은 여전히 하지 않음**. 무허가 origin·인증 값 수집 제한, Step 1/2 회귀 보존.
+- 첫 Chromium 재시도에서 20/21 PASS였으나 마지막 실패는 **API가 없을 때 `chart_candidates` 키가 생략될 수 있음을 테스트에서 고려하지 않은 기대값 문제**. 키 생략을 허용하는 테스트만 수정한 최신 SHA로 21/21 PASS 검증. 이력상 실패를 최종 성공과 혼동 금지.
+- **사용자 Windows 실제 대시보드에서 새 SVG/CSS 변화 감지가 성공하는지는 미검증**. 일반 CSS/SVG 변화가 반드시 실제 데이터 변화를 뜻하는 것도 아님. 해당 사이트의 API 연결 후보 0건 문제는 여전히 별도 데이터 근거가 필요.
+- 상세 근거: `docs/STEP3_GENERIC_CHART_GEOMETRY_PENDING_2026-10-18.md` 상단의 최종 판정 섹션. 기존 문서에 남아 있는 'CI 차단/PR4 미병합' 내용은 과거 이력.
+
+---
+
 # 2026-10-18 22:44 KST — p3 다음 1단위 구현, CI 차단으로 병합 대기
 
 - `r`을 한글 자판의 `ㄱ`으로 해석해 다음 범위 단위 시작: 일반 SVG와 CSS bar 그룹의 기하적 변화 단서 수집.
