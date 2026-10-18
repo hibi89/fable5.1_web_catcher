@@ -1,0 +1,115 @@
+{
+  "schema_version": "1.0",
+  "technologies": [
+    {
+      "name": "React", "category": "frontend",
+      "signals": [
+        {"source": "html", "pattern": "^react_root$", "weight": 0.85, "note": "React 루트 DOM 속성", "group": "react-root"},
+        {"source": "script_src", "pattern": "(?:^|[/])react(?:-dom)?(?:\\.production|\\.development|\\.min)?(?:\\.[0-9]+(?:\\.[0-9]+)*)?\\.js(?:[?]|$)", "weight": 0.75, "note": "React 자바스크립트 자산 경로", "group": "react-script"}
+      ]
+    },
+    {
+      "name": "Next.js", "category": "frontend",
+      "signals": [
+        {"source": "html", "pattern": "^next_data$", "weight": 0.94, "note": "__NEXT_DATA__ script 요소", "group": "next-html"},
+        {"source": "script_src", "pattern": "/_next/static/", "weight": 0.88, "note": "Next.js 정적 빌드 자산 경로", "group": "next-assets"},
+        {"source": "html", "pattern": "^next_root$", "weight": 0.25, "note": "Next.js 관례의 __next 루트", "group": "next-root"}
+      ]
+    },
+    {
+      "name": "Vue", "category": "frontend",
+      "signals": [
+        {"source": "html", "pattern": "^vue_mount$", "weight": 0.75, "note": "Vue 마운트 DOM 속성", "group": "vue-mount"},
+        {"source": "script_src", "pattern": "(?:^|/)vue(?:\\.runtime|\\.global|\\.esm-browser|\\.min|\\.global\\.prod)?\\.js(?:[?]|$)", "weight": 0.8, "note": "Vue 자바스크립트 자산 경로", "group": "vue-assets"}
+      ]
+    },
+    {
+      "name": "Nuxt", "category": "frontend",
+      "signals": [
+        {"source": "html", "pattern": "^nuxt_data$|^nuxt_payload$", "weight": 0.9, "note": "Nuxt 런타임 DOM/페이로드 단서", "group": "nuxt-html"},
+        {"source": "script_src", "pattern": "/_nuxt/", "weight": 0.85, "note": "Nuxt 빌드 자산 경로", "group": "nuxt-assets"}
+      ]
+    },
+    {
+      "name": "Angular", "category": "frontend",
+      "signals": [
+        {"source": "html", "pattern": "^angular_version$", "weight": 0.9, "note": "Angular ng-version DOM 속성", "group": "angular-version"},
+        {"source": "html", "pattern": "^angular_app$", "weight": 0.65, "note": "AngularJS ng-app DOM 속성", "group": "angular-app"}
+      ]
+    },
+    {
+      "name": "PHP", "category": "backend_inferred",
+      "signals": [
+        {"source": "response_header", "key": "x-powered-by", "pattern": "\\bPHP(?:/[0-9]+(?:\\.[0-9]+)*)?\\b", "weight": 0.7, "note": "서버가 노출한 PHP 헤더 (위조 가능)", "group": "php-header", "version_pattern": "PHP/([0-9]+(?:\\.[0-9]+)*)"},
+        {"source": "cookie_name", "pattern": "^PHPSESSID$", "weight": 0.55, "note": "PHP 세션 쿠키 이름 (추정)", "group": "php-cookie"}
+      ]
+    },
+    {
+      "name": "ASP.NET", "category": "backend_inferred",
+      "signals": [
+        {"source": "response_header", "key": "x-powered-by", "pattern": "ASP\\.NET", "weight": 0.65, "note": "ASP.NET 응답 헤더 (위조 가능)", "group": "asp-header"},
+        {"source": "response_header", "key": "x-aspnet-version", "pattern": "^[0-9]+(?:\\.[0-9]+)+$", "weight": 0.7, "note": "ASP.NET 서버 버전 헤더", "group": "asp-version", "version_pattern": "^([0-9]+(?:\\.[0-9]+)+)$"},
+        {"source": "cookie_name", "pattern": "^ASP\\.NET_SessionId$", "weight": 0.55, "note": "ASP.NET 세션 쿠키 이름", "group": "asp-cookie"}
+      ]
+    },
+    {
+      "name": "Express", "category": "backend_inferred",
+      "signals": [
+        {"source": "response_header", "key": "x-powered-by", "pattern": "^Express$", "weight": 0.6, "note": "Express 응답 헤더 (위조 가능)", "group": "express-header"}
+      ]
+    },
+    {
+      "name": "Django", "category": "backend_inferred",
+      "signals": [
+        {"source": "cookie_name", "pattern": "^csrftoken$", "weight": 0.35, "note": "Django 관례의 CSRF 쿠키 (타 프레임워크에서도 사용 가능)", "group": "django-csrf"},
+        {"source": "meta_generator", "pattern": "^Django(?:[ /][0-9.]+)?$", "weight": 0.85, "note": "명시적인 Django generator 메타", "group": "django-generator", "version_pattern": "Django[ /]([0-9]+(?:\\.[0-9]+)*)"}
+      ]
+    },
+    {
+      "name": "Laravel", "category": "backend_inferred",
+      "signals": [
+        {"source": "cookie_name", "pattern": "^laravel_session$", "weight": 0.7, "note": "Laravel 관례의 세션 쿠키 이름", "group": "laravel-session"},
+        {"source": "cookie_name", "pattern": "^XSRF-TOKEN$", "weight": 0.15, "note": "XSRF 쿠키는 여러 프레임워크와 공유하는 약한 단서", "group": "laravel-xsrf"}
+      ]
+    },
+    {
+      "name": "Java Servlet", "category": "backend_inferred",
+      "signals": [
+        {"source": "cookie_name", "pattern": "^JSESSIONID$", "weight": 0.55, "note": "Servlet 계열 세션 쿠키 이름. Spring Boot 특정 불가", "group": "servlet-cookie"}
+      ]
+    },
+    {
+      "name": "Cloudflare", "category": "infra",
+      "signals": [
+        {"source": "response_header", "key": "cf-ray", "pattern": "^[A-Za-z0-9-]+$", "weight": 0.9, "note": "Cloudflare 요청 식별 헤더", "group": "cloudflare-cf"},
+        {"source": "response_header", "key": "server", "pattern": "\\bcloudflare\\b", "weight": 0.75, "note": "서버 배너상 Cloudflare", "group": "cloudflare-server"}
+      ]
+    },
+    {
+      "name": "Vercel", "category": "infra",
+      "signals": [
+        {"source": "response_header", "key": "x-vercel-id", "pattern": ".+", "weight": 0.93, "note": "Vercel 요청 식별 헤더", "group": "vercel-id"},
+        {"source": "response_header", "key": "server", "pattern": "\\bvercel\\b", "weight": 0.7, "note": "서버 배너상 Vercel", "group": "vercel-server"}
+      ]
+    },
+    {
+      "name": "Netlify", "category": "infra",
+      "signals": [
+        {"source": "response_header", "key": "x-nf-request-id", "pattern": ".+", "weight": 0.93, "note": "Netlify 요청 식별 헤더", "group": "netlify-id"},
+        {"source": "response_header", "key": "server", "pattern": "\\bnetlify\\b", "weight": 0.65, "note": "서버 배너상 Netlify", "group": "netlify-server"}
+      ]
+    },
+    {
+      "name": "nginx", "category": "infra",
+      "signals": [
+        {"source": "response_header", "key": "server", "pattern": "\\bnginx(?:/[0-9.]+)?\\b", "weight": 0.8, "note": "웹서버 nginx 배너 (앱 백엔드와 다름)", "group": "nginx-server", "version_pattern": "nginx/([0-9]+(?:\\.[0-9]+)*)"}
+      ]
+    },
+    {
+      "name": "Apache", "category": "infra",
+      "signals": [
+        {"source": "response_header", "key": "server", "pattern": "\\bApache(?:/[0-9.]+)?\\b", "weight": 0.8, "note": "Apache HTTP 웹서버 배너 (앱 백엔드와 다름)", "group": "apache-server", "version_pattern": "Apache/([0-9]+(?:\\.[0-9]+)*)"}
+      ]
+    }
+  ]
+}

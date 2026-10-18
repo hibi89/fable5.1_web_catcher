@@ -1,0 +1,95 @@
+# Fable 5.1 Web Catcher — Step 1
+
+**Python 3.11+에서 동작하는 공개 웹페이지 기술 단서 정적 분석 CLI**입니다. 읽기 전용 GET 요청으로 URL 한 페이지의 HTML과 응답 메타데이터를 조사한 뒤, 근거 기반으로 프론트엔드 / 백엔드 **추정** / 인프라·CDN 정보를 JSON과 한국어 Markdown으로 기록합니다.
+
+백엔드 소스코드, DB, 비공개 API를 복원하는 도구가 아닙니다. 근거가 없다면 `unknown`입니다. `confidence`는 휴리스틱 점수(0–1)이며 통계적 확률이 아닙니다. 헤더와 쿠키는 변경·위조가 가능하므로 기술 확정 증거가 아닙니다.
+
+## 설치 및 실행
+
+### Windows PowerShell
+
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+python scan.py https://example.com --out ./out/demo
+python scan.py https://example.com --out ./out/demo --timeout 20
+python -m pytest -q
+```
+
+### macOS / Linux
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python scan.py https://example.com --out ./out/demo
+python scan.py https://example.com --out ./out/demo --timeout 20
+python -m pytest -q
+```
+
+`--out` 생략 시 `out/YYYYMMDD-HHMMSS-마이크로초/`에 `result.json`, `report.md`를 생성합니다. 모든 실패는 부분 결과와 안전한 경고를 저장하고 exit code `2`를 반환하며, 성공/비치명적 경고는 `0`을 반환합니다. 옵션은 `python scan.py --help` 참조. 요청 시간 초과 기본 10초(연결/읽기 각각), 자동 리다이렉트 최대 5회, HTML 다운로드 최대 2,000,000바이트. HTTPS 인증서 검증 활성화.
+
+## 수집·보안 범위
+
+- URL 1개에 대한 **GET**만 전송 (최대 5회 리다이렉트만 추적).
+- 최종 URL·HTTP 상태·리다이렉트 경로·허용 목록 응답 헤더·쿠키 이름·meta generator·script src·stylesheet href·구조적 HTML 마커·CSP 서비스 도메인을 수집.
+- 출력에 `Authorization`, `Cookie`, `Set-Cookie` 값과 원본 HTML은 저장하지 않음. URL의 민감 쿼리값, userinfo, 근거 발췌 내 인증값은 마스킹/크기 제한.
+- 403·429 및 봇 차단 의심 페이지는 경고. 네트워크 연결 실패 및 400 이상 응답에는 비정상 종료 코드를 반환.
+- 로그인, 폼 제출, 임의 엔드포인트 프로빙, 관리자·백업·`.env` 경로 탐색, 링크 크롤링, JS 실행 **모두 없음**.
+- 네트워크 접근이 사용자 입력 URL과 리다이렉트 목적지로 제한되므로 **신뢰할 수 없는 URL을 서버 내부에서 실행하지 마세요**. SSRF 차단용 보안 프록시는 포함하지 않습니다.
+
+## 결과 스키마
+
+최상위 키: `schema_version`, `target`, `scanned_at`, `scan_mode`, `frontend`, `backend_inferred`, `infra`, `api`, `charts`, `evidence`, `warnings`.
+
+기술 항목은 `name`, `version`(명확할 때만), `confidence`, `evidence_ids`를 포함합니다. 근거는 `id`, `source`, `key`, `value`, `note`. 미탐지 카테고리는 `unknown`(confidence 0, 근거 없음)으로 남깁니다. `evidence_ids`는 실제 `evidence`에 존재하는 ID만 참조합니다. `scan_mode`는 `static`, `api`는 `{"endpoints":[], "candidates":[], "connections":[]}`, `charts`는 `[]`입니다.
+
+## 규칙 파일 작성 방법
+
+`rules/fingerprints.json`은 내부에 포함된 작은 자체 제작 규칙 파일입니다. 외부 Wappalyzer나 LLM/API 키는 불필요합니다.
+
+```json
+{
+  "schema_version": "1.0",
+  "technologies": [
+    {
+      "name": "Express",
+      "category": "backend_inferred",
+      "signals": [
+        {
+          "source": "response_header",
+          "key": "x-powered-by",
+          "pattern": "^Express$",
+          "weight": 0.6,
+          "note": "Express 헤더를 통한 추정",
+          "group": "express-header"
+        }
+      ]
+    }
+  ]
+}
+```
+
+- `source`: `html`(일반 본문 단어가 아닌 사전 정의된 구조적 특징), `response_header`, `cookie_name`, `script_src`, `stylesheet_href`, `meta_generator`, `csp_domain`.
+- `key`: 헤더 등 딕셔너리형 자료에서는 선택적으로 필터.
+- `pattern`: 대소문자 구분 없는 정규식. 구체적인 마커만 사용하고 일반 본문 키워드 탐지는 금지.
+- `weight`: 0–1 단일 단서 휴리스틱 가중치. `group`의 동일 신호는 반복 횟수와 무관하게 최대 1회 계산.
+- `version_pattern`: 선택 사항. 명확한 버전 문자열에서 캡처 그룹 1을 확인한 경우만 채움.
+- `note`: 해당 근거의 한국어 설명. 모든 추정은 원본 관찰과 설명을 추적할 수 있음.
+
+16개 기술 규칙: React, Next.js, Vue, Nuxt, Angular / PHP, ASP.NET, Express, Django, Laravel, Java Servlet / Cloudflare, Vercel, Netlify, nginx, Apache. nginx/Apache는 웹서버/인프라로만 처리하고, `JSESSIONID`는 Java Servlet로만 추정합니다. Next.js가 감지되어도 전체 백엔드가 Node.js라고 주장하지 않습니다.
+
+## 오프라인 검증
+
+`tests/fixture_server.py`는 **실제 서비스가 아닌 로컬 모의 HTTP 서버**입니다. Next.js, Java Servlet 쿠키, 일반 HTML, 403/429, 리다이렉트, 민감정보 응답 등을 제공합니다.
+
+```bash
+python -m pytest -q
+```
+
+인터넷의 특정 사이트가 특정 기술을 노출한다고 기대하지 않습니다. 성공 판정은 자체 모의 서버·스키마·마스킹·종료 코드 검증만을 기준으로 합니다.
+
+## Step 2 확장 지점
+
+정적 수집 `scanner/static_scan.py`, 규칙 판정 `scanner/fingerprints.py`, 공통 데이터 `scanner/models.py`, 보고서 `scanner/report.py`가 분리되어 있습니다. 향후 선택적 브라우저 분석 결과도 같은 스키마로 반환할 수 있으나, **현재 Playwright·Record·LLM·웹 UI는 구현하지 않았습니다.**
