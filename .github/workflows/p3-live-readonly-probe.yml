@@ -3,6 +3,8 @@ name: P3 one-off read-only real-site Record probe
 on:
   push:
     branches: ["probe/p3-live-readonly-20261018"]
+  pull_request:
+    branches: [main]
     paths:
       - "tests/p3_live_readonly_probe.py"
       - ".github/workflows/p3-live-readonly-probe.yml"
