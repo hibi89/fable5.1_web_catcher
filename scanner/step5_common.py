@@ -82,7 +82,7 @@ def markdown(value):
 
 
 def masked_field(key):
-    if isinstance(key, str) and key.lower() in SAFE_FIELD_NAMES:
+    if isinstance(key, str) and key.lower() in (SAFE_FIELD_NAMES | {"empty", "deep", "layer", "nested"}):
         return key.lower()
     return "field_unknown"
 
