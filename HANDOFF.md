@@ -1,4 +1,40 @@
-# HANDOFF.md — Fable 5.1 Web Catcher / Step 2 최종 완료
+# HANDOFF.md — Fable 5.1 Web Catcher / Step 3 CLI MVP
+
+> 최신 인수인계(2026-10-18 KST). 아래 기존 Step 2 HANDOFF는 보존한 과거 이력이다. 최신 개발 기준은 이 Step 3 섹션 및 docs/STEP3_FINAL_ACCEPTANCE.md.
+
+## ① 목표·용도·확정 요구·기술
+권한 있는 공개·자체 사이트를 로컬 headed Chromium으로 사용자가 직접 탐색·로그인·조작하는 동안 기술·API·차트 근거를 수집한다. 사용자 원본 5 .1_step3.txt. Python 3.11+ Playwright, 기존 Step 1 static 및 Step 2 runtime 분석 유지. 자동 로그인·WAF 우회·LLM·웹 UI·영구 세션 저장은 범위 밖.
+
+## ② 완료 기능·변경·결정 근거
+--record/--max-duration(기본900초)/반복 --allow-origin 추가. --runtime과 중복 브라우저 실행 금지. input 스레드는 종료 신호만 송신하고 메인 Playwright 이벤트는 계속 처리. Enter·Ctrl+C·시간 만료·창 종료·EOF 처리. 새 비영구 context, 팝업/탭·main frame 문서 ID, origin 허용/응답 구조 구분, 클릭·변경 시각/구조 selector, 미수집 카운트, 원본 Step 2 collector 재사용. 차트 ↔ API 후보는 동일 page/navigation에서만 시계열 구조·DOM 갱신에 근거해 점수화하며 인과관계 확정이 아니다. cross-navigation 응답을 잃지 않도록 NetworkCollector에 완료 응답 점진적 JSON 구조 처리 도입. 새로운 네트워크 분석 엔진 대신 기존 구조 재사용 선택(유지보수·보안·회귀 영향 최소화).
+
+## ③ 테스트 및 미검증
+Windows Server 2022 Python 3.11 run 39126644441 → **60/60 PASS**. Ubuntu 24.04 실제 headed Chromium(Xvfb) run 39126644405 → **16/16 PASS**. 동일 Ubuntu 선택 공개 URL smoke **4/4 PASS**. 검증 소스 SHA 80f71d2b7de0f7a803872e76a616fe70f974e192, main merge SHA e28ea7f1f5a91d2f7a69160377558c6bc72e836d. 사용자 PC에서 사람의 실제 로그인·필터 변경은 미검증. 원본 Step 1 7/7·Step 2 9/9 완료 유지.
+
+## ④ 완료·진행·대기·차단
+Step 3 자동 fixture 기반 CLI MVP 완료(8/8 수용항목에 대한 자동 테스트 근거, 각 범위 docs/STEP3_FINAL_ACCEPTANCE.md). 사용자 로컬 Windows headed 실제 사이트 점검 **검증 대기**. Production 배포는 계획 및 구현 대상 아님. 사용자 원본을 모른 채 무단 기능 확장하지 않는다.
+
+## ⑤ 오류 근거·원인·시도·재시도 주의
+초기 headless와 다르게 headed Chrome 자원 정리 순서 오류 수정(Playwright stop 전 context/browser close). 종료 사유 덮어쓰기·finally 분기 들여쓰기 오류를 실브라우저 CI로 확인해 수정. 필터 후 차트는 DOM 관찰됐으나 최종 결과 누락됨 → 종료 시 스냅샷 항상 수행하도록 수정. JSON 구조가 페이지 이동 이후 보류될 수 있어 완료 응답을 이동 전에 점진적 요약하도록 수정. 마지막 실제 CI 60/16/4 성공. 이미 해소한 실패 재시도/무의미한 재배포 금지. SSRF 보호 없는 CLI를 외부 입력 URL 서버로 전환 금지.
+
+## ⑥ 저장소·브랜치·SHA·주요 경로
+비공개 hibi89/fable5.1_web_catcher main. 병합 PR #1. 코드: scan.py, scanner/record_scan.py, scanner/network.py, scanner/chart_mapping.py, scanner/report.py 및 기존 Step 2 모듈. 테스트: tests/test_record.py, tests/browser_record_check.py. 자동화: .github/workflows/runtime-python311.yml, windows-python311.yml. 기록: README.md, REQUIREMENTS.md, docs/STEP3_FINAL_ACCEPTANCE.md. 기능 테스트 소스 SHA 80f71d2b... / main 병합 SHA e28ea7f1....
+
+## ⑦ 실행·배포·환경
+배포 미적용(로컬 CLI). Vercel/Production URL 없음. 설치: python -m pip install -r requirements.txt; python -m playwright install chromium. 실행: python scan.py URL --record --max-duration 900 --out ./out/record. 기본 origin 외 필요시 --allow-origin 정확한 origin 추가. 결과 result.json/report.md. 테스트 명령: python -m pytest -q; Linux headed: xvfb-run -a python -m pytest -q tests/browser_record_check.py.
+
+## ⑧ 원본·백업·인증·수정 금지
+첨부 요구 파일 fable5.1_step1.txt, fable5.1_step2.txt, 5 .1_step3.txt 원본 우선. GitHub 기존 main 이력과 병합 PR을 원복 지점으로 사용, 강제 push 금지. 토큰·세션·cookie 값·입력값·원본 응답·HAR·storage_state·스크린샷·영상 저장 금지. 로그인은 사용자가 소유·권한 있는 사이트에서 직접만 수행. Playwright 비영구 context는 종료 시 파기.
+
+## ⑨ 다음 작업·절차·완료 기준·승인
+1순위: 사용자 Windows 로컬 git pull 후 --record 실제 사이트 로그인→필터 변경→Enter→result.json/report.md에서 해당 API와 차트 **연관 후보**·마스킹 확인(기능 검증 마지막 항목). 실제 데이터 연결 인과성은 결과만으로 확정할 수 없다. 필요 시 데이터/인증 처리 범위 확대, iframe 지원, 공개 서비스·배포는 별도 보안 설계와 사전 승인 필수.
+
+## ⑩ 갱신 일시·검증 범위·문서 기준
+2026-10-18 21:20 KST 부근. 기능 SHA 80f71d2b...에서 Windows/Ubuntu CI 직접 확인, main 병합 SHA e28ea7f1... 확인. 이후 HANDOFF/STATUS/BOOK 문서 커밋 HEAD는 따로 재조회하고 갱신한다. 사용자 로컬/임의 상용 사이트 완전 탐지율은 미검증.
+
+---
+
+# Step 2 HANDOFF — 보존 이력 (2026-10-18)
 
 ## ① 목표·용도·확정 요구·기술
 공개 URL의 근거 기반 기술 스캔 CLI. Step 1 = requests/BeautifulSoup 정적 분석, Step 2 = Python 3.11+ Playwright Chromium 런타임 관찰. 사용자 원본 요구 fable5.1_step1.txt 및 fable5.1_step2.txt. 비공개 GitHub `hibi89/fable5.1_web_catcher` main. **Step 1 완료 7/7; Step 2 완료 기준 9/9 PASS (공개·무인증 CLI MVP 범위).**
