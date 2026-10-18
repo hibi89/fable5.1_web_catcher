@@ -55,7 +55,7 @@ def test_real_chromium_observed_network_metadata(tmp_path):
     report = (tmp_path / 'report.md').read_text(encoding='utf-8')
     assert code == 0, data['warnings']
     assert data['scan_mode'] == 'runtime'
-    assert data['runtime']['scope'] == 'network_metadata_only'
+    assert data['runtime']['scope'] == 'network_and_connections_metadata'
     endpoints = data['api']['endpoints']
     assert len(endpoints) >= 7, endpoints
     rows = {urlsplit(item['url']).path: item for item in endpoints}
