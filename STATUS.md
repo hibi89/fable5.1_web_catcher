@@ -29,3 +29,12 @@
 
 ## 다음 진행
 **필수 Step 2 작업 없음.** 새 사용자 요청이 있을 때에만 실사이트 확대 검증·정확도 개선·후속 Step 3/배포 등을 별도로 계획. `HANDOFF.md`에 10항 인수인계.
+
+## 추가 실사이트 정확도 검증 1차 (2026-10-18 KST)
+대상: https://daily-dashboard-ldh-1013.clevertide128.chatgpt.site/#v-dash
+- 확인된 기존 약점: SPA URL fragment 손실, 18~60px 장식 SVG 다수의 과다 차트 후보 수집, CSS 막대 그룹 미감지.
+- 최소 수정: --runtime 브라우저 탐색의 hash 유지(결과에는 미노출), 실제 DOM 크기/도형 수 기반 generic SVG 필터, 가변 퍼센트 높이/너비의 반복 막대 그룹에 css_bar_pattern_candidate(library unknown, confidence 0.5) 보수적 탐지.
+- 해당 대시보드 실사이트: HTTP 200, XHR/fetch 2, 기존 차트 후보 14~15 -> **3건**(큰 SVG 2 + CSS 그룹 1), 알려진 라이브러리 0, 차트↔API 연관 후보 0(충분한 증거 없음), 오류/경고 0.
+- Windows Python 3.11 **57/57 PASS** run **39123343492**, 실제 Chromium regression **12/12 PASS** run **39123322129**, 사용자 지정 URL 실사이트 진단 성공 run **39123343463**. 실사이트 검증 코드 SHA **b7c707386034a14c44820709b4a13388dfcf7e7e**. 이후 문서 수정만 이뤄짐.
+- 실사이트 전체 그래프의 정밀 탐지율·데이터 API lineage는 미검증. 상세한 원인/회귀/출력 차이: docs/DASHBOARD_LIVE_ACCURACY_2026-10-18.md.
+- Step 2 원본 기준 9/9 PASS 판정 유지. 다음 실제 대시보드 확장 검증은 별도 지시 시 진행. 개인 Windows에 이번 개선사항이 적용됐는지는 미확인.
