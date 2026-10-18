@@ -128,7 +128,7 @@ def source_identity(result):
             return None
         # A redacted URL may collide with an unredacted one. Don't assert
         # same-site identity from it when any uncertainty exists.
-        if "[REDACTED]" in url or "…" in url:
+        if "[REDACTED]" in url or "…" in url or p.hostname.lower().endswith(".batch.invalid"):
             return None
         return (p.scheme.lower(), p.hostname.lower(), p.port,
                 p.path or "/", p.query)
@@ -142,8 +142,9 @@ def normalized_batch_url(url):
     return request_url(url)
 
 
-def safe_batch_url(url, number):
-    return anonymous_path(url, origin="site_" + str(number).zfill(3))
+def safe_batch_url(url, origin_alias):
+    """An ephemeral non-reversible alias. Never persist the real host."""
+    return anonymous_path(url, origin=origin_alias)
 
 
 def privacy_summary(result):
