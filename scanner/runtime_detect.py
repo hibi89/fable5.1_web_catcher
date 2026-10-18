@@ -125,6 +125,60 @@ CHART_OBSERVER_SCRIPT = r"""
 })();
 """
 
+# Post-wait read-only shape inspection. Detects CSS bar *groups*, not libraries.
+# Neither data values nor literal class/style/label text is returned to Python.
+CSS_BAR_GROUP_SCRIPT = r"""
+() => {
+  'use strict';
+  const groups = new Map();
+  const candidates = document.querySelectorAll('[style*="height:"],[style*="width:"]');
+  const cls = el => typeof el.className === 'string' ? el.className : '';
+  const label = el => cls(el).split(/\s+/).some(t => /(?:^|[-_])bars?(?:$|[-_])/i.test(t));
+  for (let i = 0; i < Math.min(candidates.length, 400); i++) {
+    const el = candidates[i], parent = el.parentElement;
+    if (!parent || !label(el)) continue;
+    const style = el.getAttribute('style') || '';
+    const match = style.match(/(?:^|;)\s*(?:height|width)\s*:\s*(\d+(?:\.\d+)?)%/i);
+    if (!match) continue;
+    const n = Number(match[1]);
+    if (!Number.isFinite(n) || n < 0 || n > 100) continue;
+    if (!groups.has(parent)) groups.set(parent, []);
+    groups.get(parent).push(n);
+    if (groups.size >= 40) break;
+  }
+  const selector = el => {
+    const parts = [];
+    for (let n=el, depth=0; n && n.nodeType===1 && depth<5; n=n.parentElement,depth++) {
+      const tag=n.localName.toLowerCase();
+      let index=1, prev=n;
+      while ((prev=prev.previousElementSibling)) if(prev.localName===n.localName) index++;
+      parts.unshift(tag+':nth-of-type('+Math.min(index,999)+')');
+      if(n===document.body) break;
+    }
+    return parts.join(' > ').slice(0,250);
+  };
+  const found = [];
+  for (const [parent, heights] of groups.entries()) {
+    const box = parent.getBoundingClientRect();
+    if (!parent.isConnected || heights.length < 4 ||
+        heights.length / Math.max(parent.children.length,1) < 0.65 ||
+        new Set(heights.map(n=>Math.round(n))).size < 3 ||
+        box.width < 120 || box.height < 45) continue;
+    found.push({
+      library: 'unknown', library_evidence: ['css_bar_group_pattern'],
+      selector: selector(parent),
+      first_seen_ms: Math.round(performance.timeOrigin+performance.now()),
+      last_observed_update_ms: null,
+      detection_confidence: 0.5,
+      detection_level: 'css_bar_pattern_candidate',
+      data_sources: []
+    });
+    if (found.length >= 12) break;
+  }
+  return found;
+}
+"""
+
 # Only explicit, documented window properties; no arbitrary object traversal.
 # A loaded library is not equivalent to a rendered chart.
 RUNTIME_GLOBALS_SCRIPT = r"""
@@ -194,7 +248,8 @@ def normalize_probe(snapshot: object, technologies: object) -> tuple[list[dict],
         evidence = chart.get("library_evidence")
         allowed_evidence = {
             "highcharts_dom_marker", "echarts_instance_marker", "plotly_dom_marker",
-            "apexcharts_dom_marker", "chartjs_dom_marker", "generic_svg", "generic_canvas"
+            "apexcharts_dom_marker", "chartjs_dom_marker", "generic_svg", "generic_canvas",
+            "css_bar_group_pattern"
         }
         evidence = [e for e in evidence if e in allowed_evidence][:2] if isinstance(evidence, list) else []
         selector = chart.get("selector") if isinstance(chart.get("selector"), str) else ""
@@ -211,7 +266,8 @@ def normalize_probe(snapshot: object, technologies: object) -> tuple[list[dict],
             "first_seen_ms": first if type(first) is int and first > 0 else None,
             "last_observed_update_ms": last if type(last) is int and last > 0 else None,
             "detection_confidence": float(conf) if type(conf) in (float, int) and 0 <= conf <= 1 else 0.2,
-            "detection_level": "generic_markup_candidate" if name == "unknown" else "library_dom_candidate",
+            "detection_level": ("css_bar_pattern_candidate" if "css_bar_group_pattern" in evidence else
+                                "generic_markup_candidate" if name == "unknown" else "library_dom_candidate"),
             "data_sources": [],
         })
     tech = []
@@ -251,7 +307,15 @@ def collect_runtime_charts(page, result: dict) -> None:
       return p && typeof p.snapshot === 'function' ? p.snapshot() : {};
     }""")
     globals_seen = page.evaluate(RUNTIME_GLOBALS_SCRIPT)
-    charts, tech, metadata = normalize_probe(snapshot, globals_seen)
+    css_groups = page.evaluate(CSS_BAR_GROUP_SCRIPT)
+    if not isinstance(css_groups, list):
+        css_groups = []
+    original = snapshot.get("charts", []) if isinstance(snapshot, dict) else []
+    if not isinstance(original, list):
+        original = []
+    charts, tech, metadata = normalize_probe({"charts": original + css_groups,
+                                              **({k: v for k, v in snapshot.items() if k != "charts"}
+                                                 if isinstance(snapshot, dict) else {})}, globals_seen)
     result["charts"] = charts
     result["runtime"]["chart_observer"] = metadata
     result["runtime"]["technologies"] = tech
