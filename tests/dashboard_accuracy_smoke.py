@@ -78,6 +78,25 @@ def test_dashboard_structural_diagnostic(tmp_path: Path):
                            },{}) : {}
                        };
                     }),
+                    cssStructure: Array.from(document.querySelectorAll(
+                       '[class*="chart"],[class*="Chart"],[class*="bar"],[class*="Bar"],[class*="plot"],[class*="Plot"]'
+                    )).slice(0,30).map(e => ({
+                       tag: e.tagName.toLowerCase(),
+                       classes: String(e.getAttribute('class')||'').slice(0,100),
+                       width: Math.round(e.getBoundingClientRect().width),
+                       height: Math.round(e.getBoundingClientRect().height),
+                       children: e.children.length,
+                       inlineSizedDesc: e.querySelectorAll('div[style]').length,
+                       svgDesc: e.querySelectorAll('svg').length
+                    })),
+                    sizeStyles: Array.from(document.querySelectorAll('div[style]'))
+                     .filter(e=> /(?:width|height):/.test(e.getAttribute('style')||''))
+                     .slice(0,20).map(e=> ({
+                        styles:String(e.getAttribute('style')).slice(0,90),
+                        classes:String(e.getAttribute('class')||'').slice(0,80),
+                        parentClasses:String(e.parentElement?.getAttribute('class')||'').slice(0,80),
+                        siblings:e.parentElement?.children.length
+                     })),
                     bodyExists: !!document.body
                 })""")
                 print("BROWSER_DOM_INVENTORY", json.dumps({
