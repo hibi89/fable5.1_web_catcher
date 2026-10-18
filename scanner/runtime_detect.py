@@ -54,7 +54,7 @@ CHART_OBSERVER_SCRIPT = r"""
     return ['unknown', 'generic_' + el.tagName.toLowerCase(), 0.2];
   }
   function record(el, changed) {
-    if (!ntype(el) || !/^(SVG|CANVAS)$/.test(el.tagName)) return;
+    if (!ntype(el) || !/^(svg|canvas)$/.test((el.localName || el.tagName).toLowerCase())) return;
     let item = charts.get(el);
     if (!item && charts.size >= MAX_CHARTS) { capped = true; return; }
     const type = classify(el), now = clock();
@@ -98,7 +98,7 @@ CHART_OBSERVER_SCRIPT = r"""
         } else if (entry.type === 'attributes') {
           visit(entry.target, true);
           if (entry.target.parentElement &&
-              /^(SVG|CANVAS)$/.test(entry.target.parentElement.tagName))
+              /^(svg|canvas)$/.test((entry.target.parentElement.localName || entry.target.parentElement.tagName).toLowerCase()))
             record(entry.target.parentElement, true);
         }
       }
