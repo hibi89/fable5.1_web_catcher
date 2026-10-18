@@ -1,6 +1,6 @@
 # STATUS.md — Step 1 진행 상태
 
-- 상태: **Step 1 구현·GitHub 반영 완료, Windows·Linux·macOS Python 3.11 독립 새 가상환경 설치 및 pytest 각각 23/23 PASS**. Python 공식 사이트 1곳의 실제 공개 HTML 분석 검증 완료. 그 밖의 사이트는 추가 검증 미실시.
+- 상태: **Step 1 최종 완료 — 원본 완료 기준 7/7 충족(100%)**. Windows·Linux·macOS Python 3.11 최신 회귀 테스트 각 **26/26 PASS**. Python 공식 사이트 및 example.com의 실사이트 스키마·evidence 검증 PASS. Step 2 지침 미수령·미착수.
 - 범위: 첨부 `fable5.1_step1.txt`의 공개 HTTP/HTML 정적 기술 근거 스캐너.
 - 구현: CLI, 수집/마스킹/판별/보고서/자체 규칙 파일, 오프라인 fixture 서버, pytest.
 - Windows 검증(사용자 제공 터미널 기록, 2026-10-18 KST): `python scan.py https://example.com --out ./out/demo` 성공, `result.json` 및 `report.md` 생성 메시지 확인. `python -m pytest -q` 최초 19 PASS·3 FAIL(cp949 UnicodeDecodeError) → 테스트의 `read_text(encoding="utf-8")` 수정 후 **22 PASS / 0 FAIL / 5.17초**.
@@ -15,5 +15,6 @@
 - 배포: **미적용**(로컬 CLI 프로젝트, Vercel/Production 없음).
 - GitHub 소스: `hibi89/fable5.1_web_catcher` `main`, 최초 소스 커밋 `cbef84bd388f8b619d2d388bf6cf5a87c617ca45` (2026-10-18 17:03:47 KST), GitHub 직접 재조회 확인. CI 구현 `6ffb0dc0520d14e7911e0cbe3ebbef5cef568ad8`, 인코딩·회귀 테스트 수정 `78fe2ce4739825b8e9a69d471cfaacc03fc7c063`.
 - 확인된 정리 항목: `tests/test_static.py.bak`가 최초 커밋에 포함됨. 원본 보존을 위해 임의 삭제하지 않음; 추후 필요 시 `*.bak` 추적 제외 및 저장소 정리 검토.
-- 다음 단계: (1) 로컬은 필요 시 `git pull origin main`으로 동기화하고 pytest 23개 재검증, (2) 공개 URL 1곳 실전 스키마 검증 및 macOS CI 검증 완료; 다른 공개 URL·일부 보안 경계 검증은 선택 미완료, (3) Step 2 동적 분석은 설계·비용·승인 후 별도 구현. 추적 중인 `.bak`는 보존(임의 삭제하지 않음).
-- 상태 확인: 2026-10-18 17:39 KST. 문서 근거: Windows CI `39111101377`(23/23), Linux CI `39111476135`(23/23), macOS CI `39112226557`(23/23), 실사이트 smoke `39111940046` 성공 로그. macOS 테스트 워크플로 커밋 `e8edeb8669fa9b1deb346aa2ffef5df7acf85f0a`. 스캐너 핵심 구현 변경 없음; 기존 CI 보존; 배포 없음.
+- 완료 판정: `docs/STEP1_FINAL_ACCEPTANCE.md`에서 원본 7개 완료 조건 **PASS 7/7** 확정. 최종 코드 기준 3개 OS 각 26/26 PASS, 실사이트 두 곳 스키마·보고서 PASS. Step 1 필수 미완료 항목 **없음**.
+- 다음 단계: 사용자는 새 채팅방에서 `p3` 프로젝트를 복원하고 아직 제공하지 않은 Step 2 지침을 전달한다. 지침 수령 전 Step 2 구현·Playwright·Record·LLM·웹 UI 작업 금지. 로컬 동기화는 필요 시 `git pull origin main` 후 `python -m pytest -q` (현재 26개). `tests/test_static.py.bak` 보존; 배포 없음.
+- 최종 검증 일시: 2026-10-18 KST. 최신 테스트 커밋 `9d47bdb06b1b42eca9babfe24f3558d49cf84c37`에 대해 Windows Actions `39112750832` **26/26**, Linux `39112888488` **26/26**, macOS `39112888546` **26/26**; Python 공식 사이트 `39111940046`/example.com `39112750908` 결과 검증 success. 인수인계 최종 파일: `docs/STEP1_FINAL_ACCEPTANCE.md`. 핵심 스캐너 기능 변경 없음; 추가된 것은 보안 경계 테스트와 검증 워크플로. Vercel/Production 미적용.

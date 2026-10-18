@@ -10,6 +10,9 @@
 
 ## 3. 테스트 명령·성공/실패 수·검증/미검증
 
+- **Step 1 최종 판정 (2026-10-18 KST): 원본 완료 기준 7/7 PASS, 100% 완료.** 최신 3개 OS Python 3.11 결과: Windows `39112750832` 26/26 PASS(6.73초), Ubuntu `39112888488` 26/26 PASS(6.58초), macOS `39112888546` 26/26 PASS(41.63초). 최종 근거 `docs/STEP1_FINAL_ACCEPTANCE.md`.
+- **추가 실제 공개 URL:** `https://example.com/` HTTP 200·JSON/Markdown·evidence 무결성·경고 0, GitHub Actions `39112750908` success. 기존 `https://www.python.org/` smoke `39111940046`도 success. 기술명 감지는 필수 판정 조건 아님.
+- **보안 경계 추가 3테스트:** `tests/test_final_acceptance.py`에서 리다이렉트 상한, 비HTTP 리다이렉트 거부, URL userinfo/토큰 비노출 확인. 테스트 전용 fixture 경로 추가, 비밀값 실제 서비스 사용 없음.
 - 컨테이너 Python 3.13.5 `python -m pytest -q` → **22/22 PASS** (2026-10-18 KST, 오프라인 fixture).
 - 사용자 제공 Windows Python 3.11 `(.venv)` 기록: 첫 실행 **19 PASS / 3 FAIL** (UTF-8 파일을 기본 cp949로 읽는 테스트 오류) → `tests/test_static.py` `read_text(encoding="utf-8")` 수정 후 **22 PASS / 0 FAIL / 5.17초**.
 - Windows `python scan.py https://example.com --out ./out/demo` 정상 종료 및 결과 파일 생성 경로 출력 확인.
@@ -23,7 +26,7 @@
 
 ## 4. 완료/진행/대기/차단·중단 지점
 
-Step 1 CLI·오프라인 fixture 구현 및 Windows Python 3.11 테스트 22/22 통과. **GitHub `main`에 소스 최초 반영 확인**. 독립 새 Windows·Linux·macOS 가상환경 설치부터 fixture 테스트까지 각 23/23 PASS 검증 완료. 실제 공개 URL 1곳에 대한 구조·근거 참조 검증 완료; macOS 및 추가 공개 사이트는 선택 미완료. Step 2는 미착수.
+Step 1 CLI·오프라인 fixture 구현 및 Windows Python 3.11 테스트 22/22 통과. **GitHub `main`에 소스 최초 반영 확인**. 독립 새 Windows·Linux·macOS 가상환경 설치부터 fixture 테스트까지 각 23/23 PASS 검증 완료. Python 공식 사이트·example.com 두 곳의 구조 및 근거 참조 검증 완료. **원본 Step 1 완료 조건 7/7 모두 충족, 작업 종료.** Step 2는 지침 미수령·미착수.
 
 ## 5. 오류 근거·원인·시도·재시도 금지·대안
 
@@ -47,11 +50,11 @@ macOS 1회 검증: `.github/workflows/macos-python311.yml`는 `macos-15` / Pytho
 
 ## 9. 다음 작업 우선순위·절차·완료 기준·승인 사항
 
-1. **완료:** GitHub `main` 최초 소스 커밋 및 Windows 가상환경 22/22 PASS 검증; 문서·BOOK 동기화.
-2. **완료:** Windows·Linux CI 각 23/23 PASS. 실제 공개 Python 공식 사이트 URL 1곳의 JSON·Markdown 스키마/참조 검증 PASS (`39111940046`). **완료:** macOS Python 3.11 Actions 23/23 PASS (`39112226557`). **다음 선택 미완료:** 두 번째 실제 공개 URL 스키마 검증(기술 종류 감지를 필수로 요구하지 않음).
-3. **선택 정리:** 백업 `tests/test_static.py.bak` 추적 제외 필요성 확인 후 사용자 승인 시 정리.
-4. **승인 대기:** Step 2 Playwright/동적 분석 확장(범위·유지비용·방법 비교 뒤 진행).
+1. **Step 1 종료:** 완료 기준 7/7 PASS, 최신 세 OS 26/26 PASS, 공개 사이트 두 곳 결과 검증 PASS. 필수 작업 **0건**. 자세한 근거는 `docs/STEP1_FINAL_ACCEPTANCE.md`.
+2. **다음 채팅:** 사용자 메시지 `p3`로 최신 GitHub `main` 복원. 최신 `HANDOFF.md`·`STATUS.md`·`REQUIREMENTS.md`·`AGENTS.md`·완료 체크리스트를 확인한다.
+3. **Step 2 승인 대기:** 사용자 보유 Step 2 지침 원본은 아직 전달되지 않았다. 받은 뒤 범위·구현·비용·테스트를 검토하고 별도로 진행한다. 이 채팅에서 Step 2 개발 시작하지 않는다.
+4. **비차단 선택 과제:** 기존 백업 `tests/test_static.py.bak` 정리 시 원본 보존 원칙 및 사용자 승인 준수. 불특정 URL 서비스 배포는 SSRF/network boundary 보호를 별도 설계해야 함.
 
 ## 10. 갱신 일시·확인 시점·검증 범위·문서 기준 커밋
 
-2026-10-18 17:39 KST. 검증 범위: GitHub Windows 23 PASS, Linux 23 PASS, macOS 23 PASS, Python 공식 사이트 실제 HTTP 200/스키마/evidence 참조 CI PASS, 이전 Windows PowerShell 22 PASS. 문서 기준 핵심 코드 `78fe2ce4739825b8e9a69d471cfaacc03fc7c063`; macOS CI workflow `e8edeb8669fa9b1deb346aa2ffef5df7acf85f0a`. Step 2 미착수·배포 없음.
+2026-10-18 KST. 최종 기준 테스트 커밋 `9d47bdb06b1b42eca9babfe24f3558d49cf84c37`. GitHub Windows 26 PASS run `39112750832`, Ubuntu 26 PASS run `39112888488`, macOS 26 PASS run `39112888546`. 두 실사이트 성공 run `39111940046`, `39112750908`. 원본 7개 완료 조건 대조표 `docs/STEP1_FINAL_ACCEPTANCE.md`. Step 2 원본 지침 미제공, 미착수. Production/Vercel 배포 없음.

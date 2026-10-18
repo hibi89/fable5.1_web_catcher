@@ -96,6 +96,14 @@ python -m pytest -q
 
 2026-10-18 CI 검증: 최초 실행에서 리디렉션 stdout `cp1252`의 한글 인코딩 문제가 발견되어 수정했고, [다음 실행](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39111101377)에서 **23 passed**로 최종 검증했습니다. 한글을 표현할 수 없는 출력 스트림은 실행 중단 대신 이스케이프 문자열로 안전하게 출력합니다.
 
+## Step 1 최종 완료 상태 (2026-10-18)
+
+- 사용자 원문 `fable5.1_step1.txt`의 **완료 기준 7/7개 충족(100%)**. 상세 기준과 한계는 [최종 승인 체크리스트](docs/STEP1_FINAL_ACCEPTANCE.md)를 참고하세요.
+- 신규 경계 회귀 테스트 3개 포함하여 **26 tests**. Windows, Ubuntu, macOS 각각 Python 3.11의 독립 새 가상환경에서 전체 통과. 기존 23 PASS 기록은 중간 검증 기록이며 최신 최종 결과는 26 PASS입니다.
+- 실제 공개 홈페이지 `https://www.python.org/`와 `https://example.com/`에서 결과 파일과 schema/evidence 무결성을 확인했습니다. 특정 기술의 탐지를 성공 조건으로 요구하지 않았습니다.
+- 실행: `python scan.py https://example.com --out ./out/demo` / 테스트: `python -m pytest -q`.
+- 배포나 Playwright·Record·LLM·웹 UI는 범위 밖입니다. **Step 2는 사용자 지침을 전달받기 전까지 착수하지 않습니다.**
+
 ## Step 2 확장 지점
 
 정적 수집 `scanner/static_scan.py`, 규칙 판정 `scanner/fingerprints.py`, 공통 데이터 `scanner/models.py`, 보고서 `scanner/report.py`가 분리되어 있습니다. 향후 선택적 브라우저 분석 결과도 같은 스키마로 반환할 수 있으나, **현재 Playwright·Record·LLM·웹 UI는 구현하지 않았습니다.**
