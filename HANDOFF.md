@@ -1,3 +1,15 @@
+# 2026-10-18 23:46 KST — p3 실사이트 읽기 전용 Record 확인 인수
+
+- 이전 마지막 `ㄱ`: PR #4 병합 이후 사용자가 실사이트 검증을 요청. 기존 소스를 재개발하지 않고 임시 브랜치 `probe/p3-live-readonly-20261018`에서 실제 웹사이트 1회 관찰.
+- [Actions 39137433372](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39137433372) SUCCESS: Ubuntu Playwright headed Chromium/Xvfb, HTTP 200, 12.397초, 문서 1, SVG 2/CSS bar 1, API 1건, stop_signal, fatal false.
+- **API 분석 `compressed_size_unknown` 1건, JSON shape 0건**: 압축 JSON인데 Content-Length가 없으므로 보수적 보안 차단. `--allow-origin`은 이전 사용자가 승인한 `https://practice02.61-107-199-22.sslip.io` 정확한 origin 사용. 압축 해제 메모리의 하드 상한 보장 없는 상태에서 무리하게 우회하지 말 것.
+- 수동 상호작용 0/changed_chart 0/chart-api 후보 0. **읽기 전용 검증**이므로 PR #4의 실제 데이터 변화 검출 성공/실패를 판정하지 않는다. 사용자 Windows 최신 코드 검증 전.
+- 민감값/로그인/원본 응답/화면 캡처/결과 JSON 파일 업로드 없음, GitHub에 집계만 남김. 원격 테스트 전용 [PR #5](https://github.com/hibi89/fable5.1_web_catcher/pull/5)는 **closed unmerged**, main에 테스트용 URL/워크플로 미반영.
+- 자세한 근거는 `docs/STEP3_LIVE_READONLY_2026-10-18.md`. 다음 `ㄱ`에서는 **한 단위**만 진행: 안전한 압축 미확인 길이 응답 분석 타당성·개선 또는 사용자 최종 Windows Record 확인. generic CSS/SVG의 API 계보를 무근거로 확정하지 않는다.
+- 기존 PR #3/#4 기능 main 병합 및 CI Windows 65/65, Chromium 21/21, 공개 홈페이지 4/4 PASS 상태 유지.
+
+---
+
 # 2026-10-18 23:37 KST — p3 PR #4 병합 후 인수인계
 
 - **PR #4 main 병합 완료**: `67e72529be4d5e6a190d7c63fc0c840878301965`, 검증 기능 SHA `30a59be00d473a1040d67aa0d3166f41b70f5e70`. GitHub 저장소 Public 전환 후 Actions가 정상 동작해 CI 차단이 해소됨.
