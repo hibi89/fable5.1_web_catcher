@@ -33,7 +33,7 @@ python -m pytest -q
 xvfb-run -a python -m pytest -q tests/browser_record_check.py
 ~~~
 
-Step 3 실제 CI와 사용자 Windows 직접 로그인 절차가 검증되기 전에는 완료로 판정하지 않습니다.
+Step 3 자동 fixture 검증: Windows 60/60, Ubuntu 실제 headed Chromium 16/16, 선택 공개 사이트 4/4 PASS. 사용자 Windows에서 실제 사이트 로그인·필터 변경·Enter까지의 수동 실사용 확인은 여전히 미검증입니다. 상세 근거: docs/STEP3_FINAL_ACCEPTANCE.md.
 
 ## 설치 및 실행
 
