@@ -165,10 +165,26 @@ def privacy_summary(result):
     }
 
 
-def safe_structure(shape):
-    # Reuse Step 4 value-free parser and key allowlist, then ensure data only
-    # contains simple descriptor types. Handles old malformed versions.
-    return _shape(shape)
+def safe_structure(shape, depth=0):
+    """Value-free old/new shape summary preserving integer and unknown types."""
+    if depth >= 7:
+        return "truncated"
+    if isinstance(shape, str):
+        return shape if shape in ALLOWED_TYPES else "unknown"
+    if isinstance(shape, list):
+        return [safe_structure(x, depth+1) for x in shape[:3]]
+    if isinstance(shape, dict):
+        result = {}
+        for k, v in list(shape.items())[:24]:
+            safe = masked_field(k)
+            if safe in result:
+                # Redacted keys may collapse; never pretend the last won.
+                prior = result[safe]
+                result[safe] = prior if prior == safe_structure(v, depth+1) else "unknown"
+            else:
+                result[safe] = safe_structure(v, depth+1)
+        return result
+    return "unknown"
 
 
 def safe_error(kind):
