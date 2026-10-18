@@ -107,7 +107,15 @@ CHART_OBSERVER_SCRIPT = r"""
       attributes:true, attributeFilter:['class','style','width','height','viewBox','_echarts_instance_']});
   }
   Object.defineProperty(window, '__fable51_chart_probe', {
-    value: {snapshot: () => ({charts:Array.from(charts.values()), capped,
+    value: {snapshot: () => ({charts:Array.from(charts.entries()).filter(([el, item]) => {
+      if (item.library !== 'unknown') return true;
+      if (!el.isConnected) return false;
+      const box = el.getBoundingClientRect();
+      const tag = (el.localName || '').toLowerCase();
+      if (tag === 'canvas') return box.width >= 100 && box.height >= 70;
+      const marks = el.querySelectorAll('path,line,rect,circle,polyline,polygon').length;
+      return box.width >= 100 && box.height >= 70 && marks >= 2;
+    }).map(([el, item]) => item), capped,
       mutation_count: mutations, initialized: started})},
     configurable:false, enumerable:false
   });
