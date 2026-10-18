@@ -25,6 +25,30 @@ from tests.fixture_server import FixtureHandler
 class RecordHandler(FixtureHandler):
     def do_GET(self):
         path = self.path.split('?', 1)[0]
+        if path == '/cross-api':
+            obj = json.dumps({'points': [{'date': 'EXTERNAL_DATE_SECRET',
+                                           'value': 12, 'password': 'EXTERNAL_BODY_SECRET'}]}).encode()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Length', str(len(obj)))
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(obj)
+            return
+        if path == '/record-spa':
+            body = b"""<!doctype html><html><body>
+            <button id='change'>Change</button>
+            <svg class='highcharts-root' width='250' height='150'><path d='M 0 0'/><path d='M 1 1'/></svg>
+            <svg class='highcharts-root' width='250' height='150'><path d='M 2 2'/><path d='M 3 3'/></svg>
+            <script>
+            let counter = 0;
+            document.getElementById('change').onclick=() => {
+              counter++;
+              history.pushState({counter}, '', '/record-spa?route='+counter+'&token=SECRET_ROUTE#v-'+counter);
+              fetch('/api/chart?token=SECRET_API');
+            };
+            </script></body></html>"""
+            return self._dynamic_response(body, 'text/html')
         if path == '/record':
             body = b"""<!doctype html><html><body>
             <input id='password' type='password' value='LOGIN_VALUE_PRIVATE'>
@@ -213,3 +237,93 @@ def test_real_headed_record_ctrlc_signal_and_inflight_response_limit(monkeypatch
         dumped = json.dumps(limited, ensure_ascii=False)
         assert 'INFLIGHT_PRIVATE' not in dumped
         assert 'OVERFLOW_PRIVATE' not in dumped
+
+
+def test_real_headed_spa_hash_and_history_not_fake_documents(tmp_path):
+    # SPA pushState/fragment changes the address, not the document identity.
+    # Full page navigation still creates a separate document and new markers.
+    stages = set()
+    with serve_record() as url:
+        data = blank_result(url)
+        def operate(context, pages, elapsed, stop):
+            pg = context.pages[0]
+            if 'spa' not in stages:
+                stages.add('spa')
+                pg.locator('#change').click()
+                pg.locator('#change').click()
+                pg.evaluate("""() => history.pushState({}, '', '/record-spa?token=HIDDEN#route')""")
+                pg.wait_for_timeout(350)
+                return
+            if 'reload' not in stages:
+                stages.add('reload')
+                pg.goto(url + '/record-spa')
+                pg.locator('#change').click()
+                pg.wait_for_timeout(150)
+                stop.set()
+        assert run_record(url + '/record-spa#first', data, timeout=8,
+                          max_duration=15, stop_event=threading.Event(),
+                          test_hook=operate) is False
+    rec = data['record']
+    assert rec['stop_reason'] == 'stop_signal'
+    assert len(rec['pages']) == 2, rec['pages']
+    assert len({(p['page_id'], p['navigation_id']) for p in rec['pages']}) == 2
+    markers = [m for m in rec['interactions'] if m['tag'] == 'button']
+    assert len(markers) == 3, markers
+    assert len({(m['navigation_id'], m['at_ms']) for m in markers}) == 3
+    assert markers[0]['navigation_id'] == markers[1]['navigation_id']
+    assert markers[2]['navigation_id'] != markers[1]['navigation_id']
+    chart_ids = [chart['id'] for chart in data['charts']]
+    assert len(chart_ids) == len(set(chart_ids)), chart_ids
+    assert data['target']['final_url'] is not None
+    output = json.dumps(data, ensure_ascii=False)
+    for secret in ('SECRET_ROUTE', 'SECRET_API', 'HIDDEN', '#first', '#route'):
+        assert secret not in output
+
+
+def test_real_headed_closed_browser_keeps_redacted_final_url(tmp_path):
+    with serve_record() as url:
+        data = blank_result(url + '/record?token=ORIGINAL_SECRET')
+        closed = set()
+        def close_early(context, pages, elapsed, stop):
+            if not closed:
+                closed.add(True)
+                context.pages[0].close()
+        assert run_record(url+'/record?token=LAST_SECRET', data,
+                          timeout=5, max_duration=10,
+                          stop_event=threading.Event(), test_hook=close_early) is False
+    assert data['record']['stop_reason'] == 'browser_closed'
+    assert data['target']['final_url'] == url + '/record'
+    output = json.dumps(data)
+    assert 'LAST_SECRET' not in output
+    assert 'ORIGINAL_SECRET' not in output
+
+
+def test_real_headed_external_json_requires_explicit_allow_origin():
+    with serve_record() as dashboard, serve_record() as external:
+        records = []
+        for allow in ([], [external]):
+            result = blank_result(dashboard)
+            fired = set()
+            def hook(context, pages, elapsed, stop):
+                if not fired:
+                    fired.add(True)
+                    pg = context.pages[0]
+                    pg.evaluate("""base => fetch(base + '/cross-api?token=EXTERNAL_QUERY_SECRET').catch(() => {})""", external)
+                    pg.wait_for_timeout(300)
+                    stop.set()
+            assert run_record(dashboard+'/record', result, timeout=8, max_duration=12,
+                              allow_origin=allow, stop_event=threading.Event(),
+                              test_hook=hook) is False
+            endpoint = next(row for row in result['api']['endpoints']
+                            if '/cross-api' in row['url'])
+            assert endpoint['url'] == external + '/cross-api'
+            records.append(endpoint)
+            serialized = json.dumps(result, ensure_ascii=False)
+            for secret in ('EXTERNAL_DATE_SECRET', 'EXTERNAL_BODY_SECRET', 'EXTERNAL_QUERY_SECRET'):
+                assert secret not in serialized
+        assert records[0]['response_body_analysis'] == 'scope_or_auth_body_excluded'
+        assert records[0]['json_structure'] is None
+        assert records[1]['response_body_analysis'] == 'structure_only'
+        assert records[1]['json_structure'] == {
+            'points': [{'date': 'string', 'value': 'number',
+                        '[REDACTED_KEY]': 'string'}]}
