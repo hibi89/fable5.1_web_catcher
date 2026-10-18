@@ -131,3 +131,42 @@ def test_cli_rejects_batch_record_and_llm(tmp_path):
                               opts, cwd=root, capture_output=True, text=True, timeout=10)
         assert proc.returncode != 0
         assert not (tmp_path/"targets").exists()
+
+
+
+def test_step5_acceptance_three_urls_then_compare_and_export_contracts(tmp_path):
+    """The exact Step 5 final 3-operation acceptance, fully local/offline."""
+    from scanner.compare import run_compare
+    from scanner.contracts import run_contracts
+    with fixture_server() as base:
+        urls = tmp_path/"three_urls.txt"
+        urls.write_text("\n".join([base+"/next",base+"/servlet",
+                                    base+"/plain"])+"\n",encoding="utf-8")
+        batch=tmp_path/"batch"
+        assert run_batch(urls,batch,scan_fn=scan,sleep=lambda _:None)==0
+    results=sorted((batch/"targets").glob("*/result.json"))
+    assert len(results)==3
+    assert run_compare(results[0],results[1],tmp_path/"diff")==0
+    assert (tmp_path/"diff"/"diff.json").is_file()
+    assert (tmp_path/"diff"/"diff.md").is_file()
+    assert run_contracts(results[0],tmp_path/"contracts")==0
+    assert (tmp_path/"contracts"/"contracts.md").is_file()
+    assert (tmp_path/"contracts"/"contracts.json").is_file()
+    document=json.loads((tmp_path/"contracts"/"contracts.json").read_text(encoding="utf-8"))
+    assert document["endpoint_count"]==0
+    assert "공식" in document["notice"]
+
+
+def test_batch_runtime_sequential_and_no_automatic_llm(tmp_path):
+    listed=tmp_path/"urls.txt"
+    listed.write_text("https://one.test\nhttps://two.test\n")
+    calls=[]
+    def spy(url,out,timeout,*,runtime=False,wait=10,headed=False):
+        calls.append((url,runtime,wait,headed))
+        write_reports(blank_result(url),out)
+        return 0
+    assert run_batch(listed,tmp_path/"batch",scan_fn=spy,runtime=True,
+                     wait=3,sleep=lambda _:None)==0
+    assert len(calls)==2
+    assert all(runtime and wait==3 for url,runtime,wait,headed in calls)
+    assert (tmp_path/"batch"/"targets"/"002-site"/"report.md").exists()
