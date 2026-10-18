@@ -75,6 +75,23 @@ def _length(headers) -> int | None:
         return None
 
 
+def _safe_transfer_bytes(request) -> int | None:
+    """Exact observed encoded body size, only after requestfinished.
+
+    Playwright reports responseBodySize as encoded transfer bytes. Do not
+    mistake the header count or missing measurement for a safe byte cap.
+    The decoded body is also checked after reading. As with known-length
+    responses, an absolute browser/decoder memory bound is not guaranteed.
+    """
+    try:
+        count = request.sizes().get('responseBodySize')
+        if type(count) is int and count >= 0:
+            return count
+    except Exception:
+        pass
+    return None
+
+
 def _is_json(mime: str | None) -> bool:
     return bool(mime and (mime == 'application/json' or mime.endswith('+json')))
 
@@ -141,7 +158,12 @@ class NetworkCollector:
             return
         length = _length(headers)
         if length is None:
-            row['response_body_analysis'] = 'size_unknown'
+            # A chunked/streamed JSON response can omit Content-Length.
+            # At requestfinished consult Playwright's observed transfer size
+            # before considering a body read. Compressed unknown-length
+            # bodies have unbounded decoded size, so never use that fallback.
+            row['response_body_analysis'] = 'waiting_for_finished_size_check'
+            self._body_queue[request] = response
         elif length > MAX_JSON_BYTES:
             row['response_body_analysis'] = 'too_large'
         else:
@@ -150,8 +172,30 @@ class NetworkCollector:
 
     def on_finished(self, request):
         row = self._request_rows.get(request)
-        if row is not None and row['response_body_analysis'] == 'waiting_for_requestfinished':
+        if row is None:
+            return
+        if row['response_body_analysis'] == 'waiting_for_requestfinished':
             row['response_body_analysis'] = 'ready'
+        elif row['response_body_analysis'] == 'waiting_for_finished_size_check':
+            response = self._body_queue.get(request)
+            if response is None:
+                row['response_body_analysis'] = 'size_unknown'
+                return
+            headers = response.headers
+            encoding = headers.get('content-encoding', '').strip().lower()
+            if encoding and encoding != 'identity':
+                row['response_body_analysis'] = 'compressed_size_unknown'
+                self._body_queue.pop(request, None)
+                return
+            wire_bytes = _safe_transfer_bytes(request)
+            if wire_bytes is None:
+                row['response_body_analysis'] = 'size_unknown'
+                self._body_queue.pop(request, None)
+            elif wire_bytes > MAX_JSON_BYTES:
+                row['response_body_analysis'] = 'too_large'
+                self._body_queue.pop(request, None)
+            else:
+                row['response_body_analysis'] = 'ready'
 
     def on_failed(self, request):
         row = self._request_rows.get(request)
