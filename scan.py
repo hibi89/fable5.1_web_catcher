@@ -79,7 +79,11 @@ def main() -> int:
         if reconfigure is not None:
             reconfigure(errors='backslashreplace')
     p = argparse.ArgumentParser(description='공개 URL의 기술 단서 정적/브라우저 관찰')
-    p.add_argument('url', help='HTTP/HTTPS 사이트 URL')
+    p.add_argument('url', nargs='?', help='HTTP/HTTPS 사이트 URL (또는 --from-result 사용)')
+    p.add_argument('--from-result', type=Path, help='저장된 result.json을 재분석 (스캔 생략)')
+    p.add_argument('--llm', action='store_true', help='명시적으로 OpenAI API 보고서 요청 (비용 가능)')
+    p.add_argument('--llm-dry-run', action='store_true', help='네트워크 0회, 외부 전송 예정 자료 파일만 출력')
+    p.add_argument('--model', help='OpenAI 모델 ID (기본 OPENAI_MODEL 환경변수, 하드코딩 없음)')
     p.add_argument('--out', type=Path, help='결과 폴더 (기본: out/날짜-시간)')
     p.add_argument('--timeout', type=float, default=10, help='탐색 타임아웃 초 (기본: 10)')
     p.add_argument('--runtime', action='store_true', help='Step 2: 격리 Chromium 브라우저 관찰')
@@ -89,6 +93,17 @@ def main() -> int:
     p.add_argument('--max-duration', type=float, default=900, help='Record 최대 초 (기본: 900)')
     p.add_argument('--allow-origin', action='append', default=[], help='추가 허용 origin (반복 지정 가능)')
     args = p.parse_args()
+    if bool(args.url) == bool(args.from_result):
+        p.error('URL 또는 --from-result 중 하나만 지정하세요.')
+    if args.llm and args.llm_dry_run:
+        p.error('--llm과 --llm-dry-run은 동시에 사용할 수 없습니다.')
+    if args.from_result and (args.runtime or args.record or args.headed or
+                             args.allow_origin or args.wait != 10):
+        p.error('--from-result는 브라우저/Record 옵션과 같이 사용할 수 없습니다.')
+    if args.llm_dry_run and not args.from_result:
+        p.error('--llm-dry-run은 --from-result가 필요합니다.')
+    if args.from_result and not (args.llm or args.llm_dry_run):
+        p.error('--from-result는 --llm 또는 --llm-dry-run이 필요합니다.')
     if not (0 < args.timeout <= 120):
         p.error('--timeout은 0보다 크고 120 이하이어야 합니다.')
     if not (0 <= args.wait <= 120):
@@ -103,10 +118,20 @@ def main() -> int:
         p.error('--max-duration은 0보다 크고 86400 이하이어야 합니다.')
     if args.allow_origin and not args.record:
         p.error('--allow-origin은 --record 전용입니다.')
+    import os
+    from scanner.llm_flow import run_llm_from_result
+    model = args.model or os.getenv('OPENAI_MODEL')
+    if args.from_result:
+        destination = args.out or args.from_result.parent
+        return run_llm_from_result(args.from_result, destination,
+                                   model=model, dry_run=args.llm_dry_run)
     destination = args.out or Path('out') / datetime.now().strftime('%Y%m%d-%H%M%S-%f')
-    return scan(args.url, destination, args.timeout, runtime=args.runtime,
-                headed=args.headed, wait=args.wait,
-                record=args.record, max_duration=args.max_duration, allow_origin=args.allow_origin)
+    status = scan(args.url, destination, args.timeout, runtime=args.runtime,
+                  headed=args.headed, wait=args.wait,
+                  record=args.record, max_duration=args.max_duration, allow_origin=args.allow_origin)
+    if status != 0 or not args.llm:
+        return status
+    return run_llm_from_result(destination / 'result.json', destination, model=model)
 
 
 if __name__ == '__main__':

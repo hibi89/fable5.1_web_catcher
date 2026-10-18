@@ -2,113 +2,685 @@
   "schema_version": "1.0",
   "technologies": [
     {
-      "name": "React", "category": "frontend",
+      "name": "React",
+      "category": "frontend",
       "signals": [
-        {"source": "html", "pattern": "^react_root$", "weight": 0.85, "note": "React 루트 DOM 속성", "group": "react-root"},
-        {"source": "script_src", "pattern": "(?:^|[/])react(?:-dom)?(?:\\.production|\\.development|\\.min)?(?:\\.[0-9]+(?:\\.[0-9]+)*)?\\.js(?:[?]|$)", "weight": 0.75, "note": "React 자바스크립트 자산 경로", "group": "react-script"}
+        {
+          "source": "html",
+          "pattern": "^react_root$",
+          "weight": 0.85,
+          "note": "React 루트 DOM 속성",
+          "group": "react-root",
+          "id": "fp-001",
+          "verification_note": "기존 검증 근거 및 synthetic 양성·음성 fixture로 패턴 회귀 점검. 헤더/자산 단서는 위조 또는 재사용 가능."
+        },
+        {
+          "source": "script_src",
+          "pattern": "(?:^|[/])react(?:-dom)?(?:\\.production|\\.development|\\.min)?(?:\\.[0-9]+(?:\\.[0-9]+)*)?\\.js(?:[?]|$)",
+          "weight": 0.75,
+          "note": "React 자바스크립트 자산 경로",
+          "group": "react-script",
+          "id": "fp-002",
+          "verification_note": "기존 검증 근거 및 synthetic 양성·음성 fixture로 패턴 회귀 점검. 헤더/자산 단서는 위조 또는 재사용 가능."
+        }
       ]
     },
     {
-      "name": "Next.js", "category": "frontend",
+      "name": "Next.js",
+      "category": "frontend",
       "signals": [
-        {"source": "html", "pattern": "^next_data$", "weight": 0.94, "note": "__NEXT_DATA__ script 요소", "group": "next-html"},
-        {"source": "script_src", "pattern": "/_next/static/", "weight": 0.88, "note": "Next.js 정적 빌드 자산 경로", "group": "next-assets"},
-        {"source": "html", "pattern": "^next_root$", "weight": 0.25, "note": "Next.js 관례의 __next 루트", "group": "next-root"}
+        {
+          "source": "html",
+          "pattern": "^next_data$",
+          "weight": 0.94,
+          "note": "__NEXT_DATA__ script 요소",
+          "group": "next-html",
+          "id": "fp-003",
+          "verification_note": "기존 검증 근거 및 synthetic 양성·음성 fixture로 패턴 회귀 점검. 헤더/자산 단서는 위조 또는 재사용 가능."
+        },
+        {
+          "source": "script_src",
+          "pattern": "/_next/static/",
+          "weight": 0.88,
+          "note": "Next.js 정적 빌드 자산 경로",
+          "group": "next-assets",
+          "id": "fp-004",
+          "verification_note": "기존 검증 근거 및 synthetic 양성·음성 fixture로 패턴 회귀 점검. 헤더/자산 단서는 위조 또는 재사용 가능."
+        },
+        {
+          "source": "html",
+          "pattern": "^next_root$",
+          "weight": 0.25,
+          "note": "Next.js 관례의 __next 루트",
+          "group": "next-root",
+          "id": "fp-005",
+          "verification_note": "기존 검증 근거 및 synthetic 양성·음성 fixture로 패턴 회귀 점검. 헤더/자산 단서는 위조 또는 재사용 가능."
+        }
       ]
     },
     {
-      "name": "Vue", "category": "frontend",
+      "name": "Vue",
+      "category": "frontend",
       "signals": [
-        {"source": "html", "pattern": "^vue_mount$", "weight": 0.75, "note": "Vue 마운트 DOM 속성", "group": "vue-mount"},
-        {"source": "script_src", "pattern": "(?:^|/)vue(?:\\.runtime|\\.global|\\.esm-browser|\\.min|\\.global\\.prod)?\\.js(?:[?]|$)", "weight": 0.8, "note": "Vue 자바스크립트 자산 경로", "group": "vue-assets"}
+        {
+          "source": "html",
+          "pattern": "^vue_mount$",
+          "weight": 0.75,
+          "note": "Vue 마운트 DOM 속성",
+          "group": "vue-mount",
+          "id": "fp-006",
+          "verification_note": "기존 검증 근거 및 synthetic 양성·음성 fixture로 패턴 회귀 점검. 헤더/자산 단서는 위조 또는 재사용 가능."
+        },
+        {
+          "source": "script_src",
+          "pattern": "(?:^|/)vue(?:\\.runtime|\\.global|\\.esm-browser|\\.min|\\.global\\.prod)?\\.js(?:[?]|$)",
+          "weight": 0.8,
+          "note": "Vue 자바스크립트 자산 경로",
+          "group": "vue-assets",
+          "id": "fp-007",
+          "verification_note": "기존 검증 근거 및 synthetic 양성·음성 fixture로 패턴 회귀 점검. 헤더/자산 단서는 위조 또는 재사용 가능."
+        }
       ]
     },
     {
-      "name": "Nuxt", "category": "frontend",
+      "name": "Nuxt",
+      "category": "frontend",
       "signals": [
-        {"source": "html", "pattern": "^nuxt_data$|^nuxt_payload$", "weight": 0.9, "note": "Nuxt 런타임 DOM/페이로드 단서", "group": "nuxt-html"},
-        {"source": "script_src", "pattern": "/_nuxt/", "weight": 0.85, "note": "Nuxt 빌드 자산 경로", "group": "nuxt-assets"}
+        {
+          "source": "html",
+          "pattern": "^nuxt_data$|^nuxt_payload$",
+          "weight": 0.9,
+          "note": "Nuxt 런타임 DOM/페이로드 단서",
+          "group": "nuxt-html",
+          "id": "fp-008",
+          "verification_note": "기존 검증 근거 및 synthetic 양성·음성 fixture로 패턴 회귀 점검. 헤더/자산 단서는 위조 또는 재사용 가능."
+        },
+        {
+          "source": "script_src",
+          "pattern": "/_nuxt/",
+          "weight": 0.85,
+          "note": "Nuxt 빌드 자산 경로",
+          "group": "nuxt-assets",
+          "id": "fp-009",
+          "verification_note": "기존 검증 근거 및 synthetic 양성·음성 fixture로 패턴 회귀 점검. 헤더/자산 단서는 위조 또는 재사용 가능."
+        }
       ]
     },
     {
-      "name": "Angular", "category": "frontend",
+      "name": "Angular",
+      "category": "frontend",
       "signals": [
-        {"source": "html", "pattern": "^angular_version$", "weight": 0.9, "note": "Angular ng-version DOM 속성", "group": "angular-version"},
-        {"source": "html", "pattern": "^angular_app$", "weight": 0.65, "note": "AngularJS ng-app DOM 속성", "group": "angular-app"}
+        {
+          "source": "html",
+          "pattern": "^angular_version$",
+          "weight": 0.9,
+          "note": "Angular ng-version DOM 속성",
+          "group": "angular-version",
+          "id": "fp-010",
+          "verification_note": "기존 검증 근거 및 synthetic 양성·음성 fixture로 패턴 회귀 점검. 헤더/자산 단서는 위조 또는 재사용 가능."
+        },
+        {
+          "source": "html",
+          "pattern": "^angular_app$",
+          "weight": 0.65,
+          "note": "AngularJS ng-app DOM 속성",
+          "group": "angular-app",
+          "id": "fp-011",
+          "verification_note": "기존 검증 근거 및 synthetic 양성·음성 fixture로 패턴 회귀 점검. 헤더/자산 단서는 위조 또는 재사용 가능."
+        }
       ]
     },
     {
-      "name": "PHP", "category": "backend_inferred",
+      "name": "PHP",
+      "category": "backend_inferred",
       "signals": [
-        {"source": "response_header", "key": "x-powered-by", "pattern": "\\bPHP(?:/[0-9]+(?:\\.[0-9]+)*)?\\b", "weight": 0.7, "note": "서버가 노출한 PHP 헤더 (위조 가능)", "group": "php-header", "version_pattern": "PHP/([0-9]+(?:\\.[0-9]+)*)"},
-        {"source": "cookie_name", "pattern": "^PHPSESSID$", "weight": 0.55, "note": "PHP 세션 쿠키 이름 (추정)", "group": "php-cookie"}
+        {
+          "source": "response_header",
+          "key": "x-powered-by",
+          "pattern": "\\bPHP(?:/[0-9]+(?:\\.[0-9]+)*)?\\b",
+          "weight": 0.7,
+          "note": "서버가 노출한 PHP 헤더 (위조 가능)",
+          "group": "php-header",
+          "version_pattern": "PHP/([0-9]+(?:\\.[0-9]+)*)",
+          "id": "fp-012",
+          "verification_note": "기존 검증 근거 및 synthetic 양성·음성 fixture로 패턴 회귀 점검. 헤더/자산 단서는 위조 또는 재사용 가능."
+        },
+        {
+          "source": "cookie_name",
+          "pattern": "^PHPSESSID$",
+          "weight": 0.55,
+          "note": "PHP 세션 쿠키 이름 (추정)",
+          "group": "php-cookie",
+          "id": "fp-013",
+          "verification_note": "기존 검증 근거 및 synthetic 양성·음성 fixture로 패턴 회귀 점검. 헤더/자산 단서는 위조 또는 재사용 가능."
+        }
       ]
     },
     {
-      "name": "ASP.NET", "category": "backend_inferred",
+      "name": "ASP.NET",
+      "category": "backend_inferred",
       "signals": [
-        {"source": "response_header", "key": "x-powered-by", "pattern": "ASP\\.NET", "weight": 0.65, "note": "ASP.NET 응답 헤더 (위조 가능)", "group": "asp-header"},
-        {"source": "response_header", "key": "x-aspnet-version", "pattern": "^[0-9]+(?:\\.[0-9]+)+$", "weight": 0.7, "note": "ASP.NET 서버 버전 헤더", "group": "asp-version", "version_pattern": "^([0-9]+(?:\\.[0-9]+)+)$"},
-        {"source": "cookie_name", "pattern": "^ASP\\.NET_SessionId$", "weight": 0.55, "note": "ASP.NET 세션 쿠키 이름", "group": "asp-cookie"}
+        {
+          "source": "response_header",
+          "key": "x-powered-by",
+          "pattern": "ASP\\.NET",
+          "weight": 0.65,
+          "note": "ASP.NET 응답 헤더 (위조 가능)",
+          "group": "asp-header",
+          "id": "fp-014",
+          "verification_note": "기존 검증 근거 및 synthetic 양성·음성 fixture로 패턴 회귀 점검. 헤더/자산 단서는 위조 또는 재사용 가능."
+        },
+        {
+          "source": "response_header",
+          "key": "x-aspnet-version",
+          "pattern": "^[0-9]+(?:\\.[0-9]+)+$",
+          "weight": 0.7,
+          "note": "ASP.NET 서버 버전 헤더",
+          "group": "asp-version",
+          "version_pattern": "^([0-9]+(?:\\.[0-9]+)+)$",
+          "id": "fp-015",
+          "verification_note": "기존 검증 근거 및 synthetic 양성·음성 fixture로 패턴 회귀 점검. 헤더/자산 단서는 위조 또는 재사용 가능."
+        },
+        {
+          "source": "cookie_name",
+          "pattern": "^ASP\\.NET_SessionId$",
+          "weight": 0.55,
+          "note": "ASP.NET 세션 쿠키 이름",
+          "group": "asp-cookie",
+          "id": "fp-016",
+          "verification_note": "기존 검증 근거 및 synthetic 양성·음성 fixture로 패턴 회귀 점검. 헤더/자산 단서는 위조 또는 재사용 가능."
+        }
       ]
     },
     {
-      "name": "Express", "category": "backend_inferred",
+      "name": "Express",
+      "category": "backend_inferred",
       "signals": [
-        {"source": "response_header", "key": "x-powered-by", "pattern": "^Express$", "weight": 0.6, "note": "Express 응답 헤더 (위조 가능)", "group": "express-header"}
+        {
+          "source": "response_header",
+          "key": "x-powered-by",
+          "pattern": "^Express$",
+          "weight": 0.6,
+          "note": "Express 응답 헤더 (위조 가능)",
+          "group": "express-header",
+          "id": "fp-017",
+          "verification_note": "기존 검증 근거 및 synthetic 양성·음성 fixture로 패턴 회귀 점검. 헤더/자산 단서는 위조 또는 재사용 가능."
+        }
       ]
     },
     {
-      "name": "Django", "category": "backend_inferred",
+      "name": "Django",
+      "category": "backend_inferred",
       "signals": [
-        {"source": "cookie_name", "pattern": "^csrftoken$", "weight": 0.35, "note": "Django 관례의 CSRF 쿠키 (타 프레임워크에서도 사용 가능)", "group": "django-csrf"},
-        {"source": "meta_generator", "pattern": "^Django(?:[ /][0-9.]+)?$", "weight": 0.85, "note": "명시적인 Django generator 메타", "group": "django-generator", "version_pattern": "Django[ /]([0-9]+(?:\\.[0-9]+)*)"}
+        {
+          "source": "cookie_name",
+          "pattern": "^csrftoken$",
+          "weight": 0.35,
+          "note": "Django 관례의 CSRF 쿠키 (타 프레임워크에서도 사용 가능)",
+          "group": "django-csrf",
+          "id": "fp-018",
+          "verification_note": "기존 검증 근거 및 synthetic 양성·음성 fixture로 패턴 회귀 점검. 헤더/자산 단서는 위조 또는 재사용 가능."
+        },
+        {
+          "source": "meta_generator",
+          "pattern": "^Django(?:[ /][0-9.]+)?$",
+          "weight": 0.85,
+          "note": "명시적인 Django generator 메타",
+          "group": "django-generator",
+          "version_pattern": "Django[ /]([0-9]+(?:\\.[0-9]+)*)",
+          "id": "fp-019",
+          "verification_note": "기존 검증 근거 및 synthetic 양성·음성 fixture로 패턴 회귀 점검. 헤더/자산 단서는 위조 또는 재사용 가능."
+        }
       ]
     },
     {
-      "name": "Laravel", "category": "backend_inferred",
+      "name": "Laravel",
+      "category": "backend_inferred",
       "signals": [
-        {"source": "cookie_name", "pattern": "^laravel_session$", "weight": 0.7, "note": "Laravel 관례의 세션 쿠키 이름", "group": "laravel-session"},
-        {"source": "cookie_name", "pattern": "^XSRF-TOKEN$", "weight": 0.15, "note": "XSRF 쿠키는 여러 프레임워크와 공유하는 약한 단서", "group": "laravel-xsrf"}
+        {
+          "source": "cookie_name",
+          "pattern": "^laravel_session$",
+          "weight": 0.7,
+          "note": "Laravel 관례의 세션 쿠키 이름",
+          "group": "laravel-session",
+          "id": "fp-020",
+          "verification_note": "기존 검증 근거 및 synthetic 양성·음성 fixture로 패턴 회귀 점검. 헤더/자산 단서는 위조 또는 재사용 가능."
+        },
+        {
+          "source": "cookie_name",
+          "pattern": "^XSRF-TOKEN$",
+          "weight": 0.15,
+          "note": "XSRF 쿠키는 여러 프레임워크와 공유하는 약한 단서",
+          "group": "laravel-xsrf",
+          "id": "fp-021",
+          "verification_note": "기존 검증 근거 및 synthetic 양성·음성 fixture로 패턴 회귀 점검. 헤더/자산 단서는 위조 또는 재사용 가능."
+        }
       ]
     },
     {
-      "name": "Java Servlet", "category": "backend_inferred",
+      "name": "Java Servlet",
+      "category": "backend_inferred",
       "signals": [
-        {"source": "cookie_name", "pattern": "^JSESSIONID$", "weight": 0.55, "note": "Servlet 계열 세션 쿠키 이름. Spring Boot 특정 불가", "group": "servlet-cookie"}
+        {
+          "source": "cookie_name",
+          "pattern": "^JSESSIONID$",
+          "weight": 0.55,
+          "note": "Servlet 계열 세션 쿠키 이름. Spring Boot 특정 불가",
+          "group": "servlet-cookie",
+          "id": "fp-022",
+          "verification_note": "기존 검증 근거 및 synthetic 양성·음성 fixture로 패턴 회귀 점검. 헤더/자산 단서는 위조 또는 재사용 가능."
+        }
       ]
     },
     {
-      "name": "Cloudflare", "category": "infra",
+      "name": "Cloudflare",
+      "category": "infra",
       "signals": [
-        {"source": "response_header", "key": "cf-ray", "pattern": "^[A-Za-z0-9-]+$", "weight": 0.9, "note": "Cloudflare 요청 식별 헤더", "group": "cloudflare-cf"},
-        {"source": "response_header", "key": "server", "pattern": "\\bcloudflare\\b", "weight": 0.75, "note": "서버 배너상 Cloudflare", "group": "cloudflare-server"}
+        {
+          "source": "response_header",
+          "key": "cf-ray",
+          "pattern": "^[A-Za-z0-9-]+$",
+          "weight": 0.9,
+          "note": "Cloudflare 요청 식별 헤더",
+          "group": "cloudflare-cf",
+          "id": "fp-023",
+          "verification_note": "기존 검증 근거 및 synthetic 양성·음성 fixture로 패턴 회귀 점검. 헤더/자산 단서는 위조 또는 재사용 가능."
+        },
+        {
+          "source": "response_header",
+          "key": "server",
+          "pattern": "\\bcloudflare\\b",
+          "weight": 0.75,
+          "note": "서버 배너상 Cloudflare",
+          "group": "cloudflare-server",
+          "id": "fp-024",
+          "verification_note": "기존 검증 근거 및 synthetic 양성·음성 fixture로 패턴 회귀 점검. 헤더/자산 단서는 위조 또는 재사용 가능."
+        }
       ]
     },
     {
-      "name": "Vercel", "category": "infra",
+      "name": "Vercel",
+      "category": "infra",
       "signals": [
-        {"source": "response_header", "key": "x-vercel-id", "pattern": ".+", "weight": 0.93, "note": "Vercel 요청 식별 헤더", "group": "vercel-id"},
-        {"source": "response_header", "key": "server", "pattern": "\\bvercel\\b", "weight": 0.7, "note": "서버 배너상 Vercel", "group": "vercel-server"}
+        {
+          "source": "response_header",
+          "key": "x-vercel-id",
+          "pattern": ".+",
+          "weight": 0.93,
+          "note": "Vercel 요청 식별 헤더",
+          "group": "vercel-id",
+          "id": "fp-025",
+          "verification_note": "기존 검증 근거 및 synthetic 양성·음성 fixture로 패턴 회귀 점검. 헤더/자산 단서는 위조 또는 재사용 가능."
+        },
+        {
+          "source": "response_header",
+          "key": "server",
+          "pattern": "\\bvercel\\b",
+          "weight": 0.7,
+          "note": "서버 배너상 Vercel",
+          "group": "vercel-server",
+          "id": "fp-026",
+          "verification_note": "기존 검증 근거 및 synthetic 양성·음성 fixture로 패턴 회귀 점검. 헤더/자산 단서는 위조 또는 재사용 가능."
+        }
       ]
     },
     {
-      "name": "Netlify", "category": "infra",
+      "name": "Netlify",
+      "category": "infra",
       "signals": [
-        {"source": "response_header", "key": "x-nf-request-id", "pattern": ".+", "weight": 0.93, "note": "Netlify 요청 식별 헤더", "group": "netlify-id"},
-        {"source": "response_header", "key": "server", "pattern": "\\bnetlify\\b", "weight": 0.65, "note": "서버 배너상 Netlify", "group": "netlify-server"}
+        {
+          "source": "response_header",
+          "key": "x-nf-request-id",
+          "pattern": ".+",
+          "weight": 0.93,
+          "note": "Netlify 요청 식별 헤더",
+          "group": "netlify-id",
+          "id": "fp-027",
+          "verification_note": "기존 검증 근거 및 synthetic 양성·음성 fixture로 패턴 회귀 점검. 헤더/자산 단서는 위조 또는 재사용 가능."
+        },
+        {
+          "source": "response_header",
+          "key": "server",
+          "pattern": "\\bnetlify\\b",
+          "weight": 0.65,
+          "note": "서버 배너상 Netlify",
+          "group": "netlify-server",
+          "id": "fp-028",
+          "verification_note": "기존 검증 근거 및 synthetic 양성·음성 fixture로 패턴 회귀 점검. 헤더/자산 단서는 위조 또는 재사용 가능."
+        }
       ]
     },
     {
-      "name": "nginx", "category": "infra",
+      "name": "nginx",
+      "category": "infra",
       "signals": [
-        {"source": "response_header", "key": "server", "pattern": "\\bnginx(?:/[0-9.]+)?\\b", "weight": 0.8, "note": "웹서버 nginx 배너 (앱 백엔드와 다름)", "group": "nginx-server", "version_pattern": "nginx/([0-9]+(?:\\.[0-9]+)*)"}
+        {
+          "source": "response_header",
+          "key": "server",
+          "pattern": "\\bnginx(?:/[0-9.]+)?\\b",
+          "weight": 0.8,
+          "note": "웹서버 nginx 배너 (앱 백엔드와 다름)",
+          "group": "nginx-server",
+          "version_pattern": "nginx/([0-9]+(?:\\.[0-9]+)*)",
+          "id": "fp-029",
+          "verification_note": "기존 검증 근거 및 synthetic 양성·음성 fixture로 패턴 회귀 점검. 헤더/자산 단서는 위조 또는 재사용 가능."
+        }
       ]
     },
     {
-      "name": "Apache", "category": "infra",
+      "name": "Apache",
+      "category": "infra",
       "signals": [
-        {"source": "response_header", "key": "server", "pattern": "\\bApache(?:/[0-9.]+)?\\b", "weight": 0.8, "note": "Apache HTTP 웹서버 배너 (앱 백엔드와 다름)", "group": "apache-server", "version_pattern": "Apache/([0-9]+(?:\\.[0-9]+)*)"}
+        {
+          "source": "response_header",
+          "key": "server",
+          "pattern": "\\bApache(?:/[0-9.]+)?\\b",
+          "weight": 0.8,
+          "note": "Apache HTTP 웹서버 배너 (앱 백엔드와 다름)",
+          "group": "apache-server",
+          "version_pattern": "Apache/([0-9]+(?:\\.[0-9]+)*)",
+          "id": "fp-030",
+          "verification_note": "기존 검증 근거 및 synthetic 양성·음성 fixture로 패턴 회귀 점검. 헤더/자산 단서는 위조 또는 재사용 가능."
+        }
+      ]
+    },
+    {
+      "name": "WordPress",
+      "category": "backend_inferred",
+      "signals": [
+        {
+          "source": "meta_generator",
+          "pattern": "(?:^|\\b)WordPress(?:[ /][0-9.]+)?(?:\\b|$)",
+          "weight": 0.85,
+          "note": "WordPress generator 명시(변조 가능)",
+          "group": "wp-generator",
+          "verification_note": "독립 패턴/양성·음성 fixture 검증; 단독 신호로 백엔드 확정 불가",
+          "id": "fp-031"
+        },
+        {
+          "source": "script_src",
+          "pattern": "/wp-content/(?:plugins|themes)/",
+          "weight": 0.65,
+          "note": "WordPress 콘텐츠 자산 경로(이전 자산 또는 프록시 가능)",
+          "group": "wp-assets",
+          "verification_note": "독립 패턴/양성·음성 fixture 검증; 단독 신호로 백엔드 확정 불가",
+          "id": "fp-032"
+        }
+      ]
+    },
+    {
+      "name": "Drupal",
+      "category": "backend_inferred",
+      "signals": [
+        {
+          "source": "meta_generator",
+          "pattern": "\\bDrupal(?:[ /][0-9.]+)?\\b",
+          "weight": 0.82,
+          "note": "Drupal generator 명시(위조 가능)",
+          "group": "drupal-generator",
+          "verification_note": "독립 패턴/양성·음성 fixture 검증; 단독 신호로 백엔드 확정 불가",
+          "id": "fp-033"
+        }
+      ]
+    },
+    {
+      "name": "Joomla",
+      "category": "backend_inferred",
+      "signals": [
+        {
+          "source": "meta_generator",
+          "pattern": "\\bJoomla!?\\b",
+          "weight": 0.8,
+          "note": "Joomla generator 명시(위조 가능)",
+          "group": "joomla-generator",
+          "verification_note": "독립 패턴/양성·음성 fixture 검증; 단독 신호로 백엔드 확정 불가",
+          "id": "fp-034"
+        }
+      ]
+    },
+    {
+      "name": "Ghost",
+      "category": "backend_inferred",
+      "signals": [
+        {
+          "source": "meta_generator",
+          "pattern": "\\bGhost(?:[ /][0-9.]+)?\\b",
+          "weight": 0.78,
+          "note": "Ghost generator 명시(위조 가능)",
+          "group": "ghost-generator",
+          "verification_note": "독립 패턴/양성·음성 fixture 검증; 단독 신호로 백엔드 확정 불가",
+          "id": "fp-035"
+        }
+      ]
+    },
+    {
+      "name": "Astro",
+      "category": "frontend",
+      "signals": [
+        {
+          "source": "script_src",
+          "pattern": "/_astro/[A-Za-z0-9_./-]+\\.(?:js|mjs)(?:\\?|$)",
+          "weight": 0.8,
+          "note": "Astro 번들 경로 단서(백엔드 불명)",
+          "group": "astro-script",
+          "verification_note": "독립 패턴/양성·음성 fixture 검증; 단독 신호로 백엔드 확정 불가",
+          "id": "fp-036"
+        }
+      ]
+    },
+    {
+      "name": "SvelteKit",
+      "category": "frontend",
+      "signals": [
+        {
+          "source": "script_src",
+          "pattern": "/_app/immutable/(?:entry|chunks|nodes)/",
+          "weight": 0.85,
+          "note": "SvelteKit 번들 정적 경로(백엔드 불명)",
+          "group": "sveltekit-immutable",
+          "verification_note": "독립 패턴/양성·음성 fixture 검증; 단독 신호로 백엔드 확정 불가",
+          "id": "fp-037"
+        }
+      ]
+    },
+    {
+      "name": "Gatsby",
+      "category": "frontend",
+      "signals": [
+        {
+          "source": "meta_generator",
+          "pattern": "^Gatsby(?:[ /][0-9.]+)?$",
+          "weight": 0.88,
+          "note": "Gatsby generator 명시",
+          "group": "gatsby-generator",
+          "verification_note": "독립 패턴/양성·음성 fixture 검증; 단독 신호로 백엔드 확정 불가",
+          "id": "fp-038"
+        }
+      ]
+    },
+    {
+      "name": "jQuery",
+      "category": "frontend",
+      "signals": [
+        {
+          "source": "script_src",
+          "pattern": "/(?:jquery|jquery\\.min)(?:-[0-9.]+)?(?:\\.min)?\\.js(?:\\?|$)",
+          "weight": 0.72,
+          "note": "jQuery 로드된 스크립트 경로 단서",
+          "group": "jquery-script",
+          "verification_note": "독립 패턴/양성·음성 fixture 검증; 단독 신호로 백엔드 확정 불가",
+          "id": "fp-039"
+        }
+      ]
+    },
+    {
+      "name": "Bootstrap",
+      "category": "frontend",
+      "signals": [
+        {
+          "source": "stylesheet_href",
+          "pattern": "/(?:bootstrap)(?:\\.min)?\\.css(?:\\?|$)",
+          "weight": 0.66,
+          "note": "Bootstrap CSS 로드 경로 단서",
+          "group": "bootstrap-css",
+          "verification_note": "독립 패턴/양성·음성 fixture 검증; 단독 신호로 백엔드 확정 불가",
+          "id": "fp-040"
+        }
+      ]
+    },
+    {
+      "name": "Bulma",
+      "category": "frontend",
+      "signals": [
+        {
+          "source": "stylesheet_href",
+          "pattern": "/bulma(?:\\.min)?\\.css(?:\\?|$)",
+          "weight": 0.73,
+          "note": "Bulma CSS 로드 경로 단서",
+          "group": "bulma-css",
+          "verification_note": "독립 패턴/양성·음성 fixture 검증; 단독 신호로 백엔드 확정 불가",
+          "id": "fp-041"
+        }
+      ]
+    },
+    {
+      "name": "Alpine.js",
+      "category": "frontend",
+      "signals": [
+        {
+          "source": "script_src",
+          "pattern": "/(?:alpine(?:\\.min)?|cdn)(?:\\.min)?\\.js(?:\\?|$)",
+          "weight": 0.53,
+          "note": "Alpine.js로 명명된 JS 자산 후보(공용 이름 중복 가능)",
+          "group": "alpine-script",
+          "verification_note": "독립 패턴/양성·음성 fixture 검증; 단독 신호로 백엔드 확정 불가",
+          "id": "fp-042"
+        }
+      ]
+    },
+    {
+      "name": "Chart.js",
+      "category": "frontend",
+      "signals": [
+        {
+          "source": "script_src",
+          "pattern": "/chart(?:\\.umd)?(?:\\.min)?\\.js(?:\\?|$)",
+          "weight": 0.58,
+          "note": "Chart.js 자산 로드 후보(그래프 인스턴스 입증 아님)",
+          "group": "chartjs-script",
+          "verification_note": "독립 패턴/양성·음성 fixture 검증; 단독 신호로 백엔드 확정 불가",
+          "id": "fp-043"
+        }
+      ]
+    },
+    {
+      "name": "Highcharts",
+      "category": "frontend",
+      "signals": [
+        {
+          "source": "script_src",
+          "pattern": "/highcharts(?:\\.src)?(?:\\.min)?\\.js(?:\\?|$)",
+          "weight": 0.76,
+          "note": "Highcharts 자산 로드 단서",
+          "group": "highcharts-script",
+          "verification_note": "독립 패턴/양성·음성 fixture 검증; 단독 신호로 백엔드 확정 불가",
+          "id": "fp-044"
+        }
+      ]
+    },
+    {
+      "name": "D3.js",
+      "category": "frontend",
+      "signals": [
+        {
+          "source": "script_src",
+          "pattern": "/d3(?:\\.v[0-9]+)?(?:\\.min)?\\.js(?:\\?|$)",
+          "weight": 0.75,
+          "note": "D3 자산 로드 단서(차트 사용 확정 아님)",
+          "group": "d3-script",
+          "verification_note": "독립 패턴/양성·음성 fixture 검증; 단독 신호로 백엔드 확정 불가",
+          "id": "fp-045"
+        }
+      ]
+    },
+    {
+      "name": "Caddy",
+      "category": "infra",
+      "signals": [
+        {
+          "source": "response_header",
+          "key": "server",
+          "pattern": "\\bCaddy\\b",
+          "weight": 0.7,
+          "note": "Caddy server 헤더(위조 가능)",
+          "group": "caddy-server",
+          "verification_note": "독립 패턴/양성·음성 fixture 검증; 단독 신호로 백엔드 확정 불가",
+          "id": "fp-046"
+        }
+      ]
+    },
+    {
+      "name": "LiteSpeed",
+      "category": "infra",
+      "signals": [
+        {
+          "source": "response_header",
+          "key": "server",
+          "pattern": "\\bLiteSpeed\\b",
+          "weight": 0.75,
+          "note": "LiteSpeed server 헤더(위조 가능)",
+          "group": "litespeed-server",
+          "verification_note": "독립 패턴/양성·음성 fixture 검증; 단독 신호로 백엔드 확정 불가",
+          "id": "fp-047"
+        }
+      ]
+    },
+    {
+      "name": "Microsoft IIS",
+      "category": "infra",
+      "signals": [
+        {
+          "source": "response_header",
+          "key": "server",
+          "pattern": "\\bMicrosoft-IIS(?:/[0-9.]+)?\\b",
+          "weight": 0.8,
+          "note": "IIS server 헤더(앱 백엔드 별개)",
+          "group": "iis-server",
+          "verification_note": "독립 패턴/양성·음성 fixture 검증; 단독 신호로 백엔드 확정 불가",
+          "id": "fp-048"
+        }
+      ]
+    },
+    {
+      "name": "OpenResty",
+      "category": "infra",
+      "signals": [
+        {
+          "source": "response_header",
+          "key": "server",
+          "pattern": "\\bopenresty(?:/[0-9.]+)?\\b",
+          "weight": 0.78,
+          "note": "OpenResty server 헤더(앱 백엔드 별개)",
+          "group": "openresty-server",
+          "verification_note": "독립 패턴/양성·음성 fixture 검증; 단독 신호로 백엔드 확정 불가",
+          "id": "fp-049"
+        }
+      ]
+    },
+    {
+      "name": "Amazon CloudFront",
+      "category": "infra",
+      "signals": [
+        {
+          "source": "response_header",
+          "key": "via",
+          "pattern": "\\bCloudFront\\b",
+          "weight": 0.75,
+          "note": "CloudFront via 헤더(CDN 제공 단서)",
+          "group": "cloudfront-via",
+          "verification_note": "독립 패턴/양성·음성 fixture 검증; 단독 신호로 백엔드 확정 불가",
+          "id": "fp-050"
+        }
       ]
     }
   ]
