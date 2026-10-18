@@ -1,0 +1,87 @@
+name: Final additional public site verification
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/step1-final-public-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  example-com:
+    name: Real public site HTML and report schema
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+
+      - name: Install in clean virtual environment
+        run: |
+          python -m venv .venv-verify
+          .venv-verify/bin/python -m pip install --disable-pip-version-check -r requirements.txt
+
+      - name: Run bounded public HTML scan
+        run: .venv-verify/bin/python scan.py https://example.com/ --out out/public-example-com --timeout 20
+
+      - name: Check JSON, Markdown, evidence, and absence of secrets
+        run: |
+          .venv-verify/bin/python - <<'PY'
+          import json
+          from pathlib import Path
+          from urllib.parse import urlsplit
+          root = Path("out/public-example-com")
+          jp, mp = root / "result.json", root / "report.md"
+          assert jp.is_file() and mp.is_file(), "Missing report artifacts"
+          result = json.loads(jp.read_text(encoding="utf-8"))
+          md = mp.read_text(encoding="utf-8")
+          required = {"schema_version", "target", "scanned_at", "scan_mode",
+                      "frontend", "backend_inferred", "infra", "api", "charts",
+                      "evidence", "warnings"}
+          assert required <= result.keys()
+          assert result["schema_version"] == "1.0"
+          assert result["scan_mode"] == "static"
+          assert result["target"]["status_code"] == 200
+          assert urlsplit(result["target"]["final_url"]).hostname == "example.com"
+          assert result["api"] == {"endpoints": [], "candidates": [], "connections": []}
+          assert result["charts"] == []
+          assert "정적 분석 보고서" in md and "## 경고" in md
+          assert len(md) > 200
+          ids = [ev["id"] for ev in result["evidence"]]
+          assert len(ids) == len(set(ids))
+          for group in ("frontend", "backend_inferred", "infra"):
+              assert result[group] and isinstance(result[group], list)
+              for tech in result[group]:
+                  assert set(tech) == {"name", "version", "confidence", "evidence_ids"}
+                  assert 0 <= tech["confidence"] <= 1
+                  assert set(tech["evidence_ids"]) <= set(ids)
+          for banned in ("Authorization:", "Set-Cookie:", "Cookie:"):
+              assert banned not in md and banned not in jp.read_text(encoding="utf-8")
+          print("FINAL_PUBLIC_SITE_PASS " + json.dumps({
+              "site": "https://example.com/",
+              "status": result["target"]["status_code"],
+              "schema": result["schema_version"],
+              "evidence": len(ids),
+              "warnings": len(result["warnings"]),
+              "json_bytes": jp.stat().st_size,
+              "markdown_bytes": mp.stat().st_size,
+          }, ensure_ascii=False))
+          PY
+
+      - name: Upload generated public reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: step1-example-com-report
+          path: |
+            out/public-example-com/result.json
+            out/public-example-com/report.md
+          if-no-files-found: error
+          retention-days: 7

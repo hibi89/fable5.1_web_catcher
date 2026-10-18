@@ -18,6 +18,16 @@ class FixtureHandler(BaseHTTPRequestHandler):
             self.send_header("Location", "/next?access_token=REDIRECT_PRIVATE&mode=test")
             self.end_headers()
             return
+        if path == "/redirect-loop":
+            self.send_response(302)
+            self.send_header("Location", "/redirect-loop?access_token=LOOP_PRIVATE")
+            self.end_headers()
+            return
+        if path == "/redirect-invalid":
+            self.send_response(302)
+            self.send_header("Location", "file:///etc/passwd?token=REDIRECT_SCHEME_PRIVATE")
+            self.end_headers()
+            return
         if path == "/blocked":
             body = b"<html><title>Access Denied</title></html>"
             self.send_response(403)
