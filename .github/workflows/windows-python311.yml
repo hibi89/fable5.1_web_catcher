@@ -1,0 +1,44 @@
+name: Windows Python 3.11 CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scan.py"
+      - "requirements.txt"
+      - "scanner/**"
+      - "rules/**"
+      - "tests/**"
+      - ".github/workflows/windows-python311.yml"
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-py311:
+    name: Clean Windows Python 3.11 fixture tests
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Create isolated virtual environment
+        shell: pwsh
+        run: python -m venv .venv-ci
+
+      - name: Install dependencies from requirements.txt
+        shell: pwsh
+        run: .\.venv-ci\Scripts\python.exe -m pip install --disable-pip-version-check -r requirements.txt
+
+      - name: Run offline fixture tests
+        shell: pwsh
+        run: .\.venv-ci\Scripts\python.exe -m pytest -q
