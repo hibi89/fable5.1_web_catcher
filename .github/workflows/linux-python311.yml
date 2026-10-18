@@ -1,4 +1,4 @@
-name: Linux Python 3.11 one-time verification
+name: Linux Step 1 final regression verification
 
 on:
   push:
