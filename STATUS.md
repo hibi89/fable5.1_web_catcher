@@ -1,20 +1,24 @@
-# STATUS.md — Step 1 진행 상태
+# STATUS.md — Fable 5.1 Web Catcher
 
-- 상태: **Step 1 최종 완료 — 원본 완료 기준 7/7 충족(100%)**. Windows·Linux·macOS Python 3.11 최신 회귀 테스트 각 **26/26 PASS**. Python 공식 사이트 및 example.com의 실사이트 스키마·evidence 검증 PASS. Step 2 지침 미수령·미착수.
-- 범위: 첨부 `fable5.1_step1.txt`의 공개 HTTP/HTML 정적 기술 근거 스캐너.
-- 구현: CLI, 수집/마스킹/판별/보고서/자체 규칙 파일, 오프라인 fixture 서버, pytest.
-- Windows 검증(사용자 제공 터미널 기록, 2026-10-18 KST): `python scan.py https://example.com --out ./out/demo` 성공, `result.json` 및 `report.md` 생성 메시지 확인. `python -m pytest -q` 최초 19 PASS·3 FAIL(cp949 UnicodeDecodeError) → 테스트의 `read_text(encoding="utf-8")` 수정 후 **22 PASS / 0 FAIL / 5.17초**.
-- GitHub Actions: `.github/workflows/windows-python311.yml` · `windows-2022` · Python 3.11 · `.venv-ci` 새 생성 · `pip install -r requirements.txt` → `pytest -q`. **2026-10-18 17:21 KST, run 39111101377, 23/23 PASS / 5.19초, 결론 success**. GitHub 로그에서 설치와 테스트 단계 각각 success 확인. 읽기 전용 토큰 권한만 요청, 배포/외부 사이트 탐색 없음.
-- 최초 CI 실패(run 39110748770): 21/22 PASS, 리디렉션된 Windows cp1252 표준출력에 한글 출력 시 `UnicodeEncodeError`. `scan.py` 출력 오류 정책을 `backslashreplace`로 정정하고 강제 cp1252 회귀 테스트 1건 추가 후 재실행 성공.
-- 컨테이너 검증(2026-10-18 KST): Python 3.13.5, 오프라인 fixture pytest **22/22 PASS**. 단 독립 격리 `.venv` 설치는 패키지 wheel/DNS 부재로 검증 불가(동일 방법 재시도 불필요).
-- GitHub Actions Linux 1회 검증: `.github/workflows/linux-python311.yml` · `ubuntu-24.04` / Python 3.11 · 새 `.venv-ci` 생성 · 의존성 설치 · pytest **23/23 PASS / 5.03초** (run `39111476135`, 2026-10-18 17:27 KST, `conclusion=success`). 자체 workflow 파일 push 시 실행 및 수동 `workflow_dispatch`만 허용하며 일반 소스 변경의 Linux 자동 반복 검증은 설정하지 않음. 권한 `contents: read`, 제한 10분. https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39111476135
-- **실제 사이트 Step 1 단일 URL 검증 성공:** `.github/workflows/public-website-smoke.yml` · `https://www.python.org/` (Python 공식 사이트) · Linux Python 3.11 새 환경 · HTTP 200, 스키마 `1.0`, 리다이렉트 0, 근거 1, 경고 0, 프론트/백엔드 `unknown`, nginx **인프라 추정**(서버 응답 단서만). JSON 2,444 bytes 및 Markdown 1,742 bytes 생성; required keys·API/charts 빈 구조·confidence 범위·evidence 참조 무결성·기본 민감 필드 비저장 검사 PASS. GitHub Actions run `39111940046` **success**, `PUBLIC_SMOKE_PASS` 로그 확인. 7일 한정 보고서 artifact ID `12130523685` 업로드됨. <https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39111940046>. 외부 사이트 전체 기술 정확도 검증은 아님. 워크플로 자체 변경에 한정한 자동 트리거와 수동 `workflow_dispatch`만 사용 (코드 변경 때 매번 외부 요청하지 않음).
-- GitHub Actions macOS 1회 검증: `.github/workflows/macos-python311.yml`, `macos-15` Python 3.11, 새 `.venv-ci` 생성 및 `requirements.txt` 설치 성공, **pytest 23/23 PASS / 40.02초**. Run `39112226557`, 2026-10-18 17:39 KST, conclusion success, 설치·테스트 단계 success. workflow 자체 수정 push와 수동 `workflow_dispatch`만 실행하며 일반 소스 변경 자동 검증은 추가하지 않음. 권한 `contents: read`, job 제한 10분. https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39112226557
-- 의존성: GitHub Actions Windows·Linux·macOS Python 3.11 새 가상환경에서 pip 설치·전체 테스트 재현성 **확인**. 사용자의 로컬 가상환경 설치 과정 자체는 로그 미확보.
-- 보안: 테스트용 민감 쿼리/쿠키/헤더 값 비노출을 포함한 fixture 테스트 통과. 임의 경로 probing, 로그인, 동적 JS 실행 없음. 신뢰할 수 없는 URL의 SSRF 보호 프록시는 구현되지 않았음.
-- 배포: **미적용**(로컬 CLI 프로젝트, Vercel/Production 없음).
-- GitHub 소스: `hibi89/fable5.1_web_catcher` `main`, 최초 소스 커밋 `cbef84bd388f8b619d2d388bf6cf5a87c617ca45` (2026-10-18 17:03:47 KST), GitHub 직접 재조회 확인. CI 구현 `6ffb0dc0520d14e7911e0cbe3ebbef5cef568ad8`, 인코딩·회귀 테스트 수정 `78fe2ce4739825b8e9a69d471cfaacc03fc7c063`.
-- 확인된 정리 항목: `tests/test_static.py.bak`가 최초 커밋에 포함됨. 원본 보존을 위해 임의 삭제하지 않음; 추후 필요 시 `*.bak` 추적 제외 및 저장소 정리 검토.
-- 완료 판정: `docs/STEP1_FINAL_ACCEPTANCE.md`에서 원본 7개 완료 조건 **PASS 7/7** 확정. 최종 코드 기준 3개 OS 각 26/26 PASS, 실사이트 두 곳 스키마·보고서 PASS. Step 1 필수 미완료 항목 **없음**.
-- 다음 단계: 사용자는 새 채팅방에서 `p3` 프로젝트를 복원하고 아직 제공하지 않은 Step 2 지침을 전달한다. 지침 수령 전 Step 2 구현·Playwright·Record·LLM·웹 UI 작업 금지. 로컬 동기화는 필요 시 `git pull origin main` 후 `python -m pytest -q` (현재 26개). `tests/test_static.py.bak` 보존; 배포 없음.
-- 최종 검증 일시: 2026-10-18 KST. 최신 테스트 커밋 `9d47bdb06b1b42eca9babfe24f3558d49cf84c37`에 대해 Windows Actions `39112750832` **26/26**, Linux `39112888488` **26/26**, macOS `39112888546` **26/26**; Python 공식 사이트 `39111940046`/example.com `39112750908` 결과 검증 success. 인수인계 최종 파일: `docs/STEP1_FINAL_ACCEPTANCE.md`. 핵심 스캐너 기능 변경 없음; 추가된 것은 보안 경계 테스트와 검증 워크플로. Vercel/Production 미적용.
+## 현재 상태 (2026-10-18 KST)
+- **Step 1 완료 100%**: 원본 7/7 PASS. Windows/Linux/macOS Python 3.11 각 26/26, Python.org 및 example.com HTTP·JSON·Markdown/evidence PASS. docs/STEP1_FINAL_ACCEPTANCE.md 참고.
+- **Step 2 진행 중 — 단위 1 구현·검증 완료**: 전체 Step 2 완료 아님. 원본 사용자 첨부 fable5.1_step2.txt 수령.
+- GitHub hibi89/fable5.1_web_catcher, main. 단위 1 구현 SHA 9db9befa4866c73dd80777d8c71191d783737c96, 추가 브라우저 CLI 검증 SHA e89bdec994f4bdcbd9132773ed12073c48e9fe4e.
+- 배포 미적용(로컬 CLI).
+
+## Step 2 단위 1 구현 범위
+- scan.py: 정적 경로 유지, --runtime / --headed / --wait 추가. 기본 대기 10초.
+- scanner/runtime_scan.py: 격리 Playwright Chromium 컨텍스트, 이동 전 이벤트 리스너·init script, DOMContentLoaded, 이벤트 펌프 대기, 2회 이내 제한 스크롤, HTTP 상태·최종 URL·script/stylesheets URL 관찰·마스킹, 오류시 부분 결과 저장 및 자원 정리.
+- models의 기존 프론트/백엔드 추정/인프라/evidence/api/charts 키 유지. runtime.scope=navigation_only 표시. 실제 API endpoint·JSON 구조·GraphQL/WebSocket/SSE·런타임 차트/연관 후보·JS 번들 추출은 미구현.
+- Playwright 의존성, 런타임 Markdown 분기, README 사용법·테스트 설명, 독립 Chromium GitHub Actions workflow 추가.
+
+## 검증
+- Windows Server 2022 Python 3.11: python -m pytest -q → **30 passed / success**, run 39114514927. Step 1 기존 26건 포함.
+- Ubuntu 24.04 Python 3.11 + Playwright Chromium: python -m pytest -q tests/browser_runtime_check.py → **2 passed / success**, run 39114514969. 하나는 실제 CLI subprocess로 --runtime --wait 수행.
+- 컨테이너 헬퍼 2/2 PASS, 하지만 시스템 Chromium 로컬 HTTP는 net::ERR_BLOCKED_BY_ADMINISTRATOR 환경 차단. 정책 우회 금지, GitHub CI로 실제 브라우저 검증 완료.
+- 사용자 PC에서의 Step 2 실행, 공개 실사이트 동적 분석 정확도, 서버 SSRF 보호는 **미검증·미구현**. Record/LLM/UI/크롤러 범위 밖.
+
+## 다음 ㄱ
+**단위 2: 네트워크 XHR/fetch 요청·응답 메타데이터 및 JSON 값 없는 구조 추출**, 민감정보 마스킹·응답 크기 제한·부분 실패시 endpoint 보존과 오프라인 테스트. 차트 후보·WebSocket/SSE·번들·연관 점수는 이후 단위. 새 ㄱ 없이는 진행하지 않음.
+
+자세한 10항 인수인계는 HANDOFF.md. 최종 테스트 소스 기준 e89bdec994f4bdcbd9132773ed12073c48e9fe4e.
