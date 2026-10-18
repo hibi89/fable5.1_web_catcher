@@ -183,3 +183,17 @@ python -m pytest -q tests/browser_runtime_check.py
 ```
 
 차트 라이브러리·차트와 API 연관 후보·JS 번들 분석은 아직 미구현입니다.
+
+## Step 2 — 단위 4: 런타임 기술·차트 DOM 후보
+
+런타임 실행은 페이지 이동 이전에 DOM 관찰기를 설치하고 초기 SVG/canvas 및 추가 노드와 관련 속성 변경을 관찰합니다.
+Next.js/Nuxt 및 Highcharts, Chart.js, ECharts, Plotly, ApexCharts, D3의 알려진 속성만 읽습니다.
+로드된 라이브러리와 관찰된 인스턴스 개수는 다르게 기록하며, 버전은 검증 가능한 공개 속성에서만 수집합니다.
+charts에는 구조적 selector, 최초 등장 시각, 속성 갱신 관찰 시각, confidence, 라이브러리 근거, data_sources 빈 목록을 보관합니다.
+일반 canvas/svg는 confidence 0.2의 후보이지 실제 차트 확정이 아닙니다. D3 존재도 차트 존재를 증명하지 않습니다.
+DOM 최초 등장 시각은 렌더 완료가 아니며 MutationObserver는 canvas 픽셀 변경을 감지할 수 없습니다.
+후보 80개, mutation 이벤트 1200개 상한. 속성이나 DOM에서 사용자 데이터/비밀값은 저장하지 않습니다.
+Unit tests: python -m pytest -q tests/test_runtime_detect.py
+Chromium fixture: python -m pytest -q tests/browser_runtime_check.py
+라이브러리 전역은 테스트용 stub으로 검증했습니다. 실제 배포 라이브러리 통합 테스트는 별도입니다.
+차트↔API 후보 점수 및 JS 번들 문자열 탐지는 아직 미구현입니다.

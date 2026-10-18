@@ -8,6 +8,8 @@ on:
       - 'scanner/runtime_scan.py'
       - 'scanner/network.py'
       - 'scanner/connections.py'
+      - 'scanner/runtime_detect.py'
+      - 'tests/test_runtime_detect.py'
       - 'tests/test_connections.py'
       - 'tests/fixture_server.py'
       - 'tests/test_network.py'

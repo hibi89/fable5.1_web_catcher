@@ -81,6 +81,36 @@ class FixtureHandler(BaseHTTPRequestHandler):
         if path == "/stream":
             self._sse_fixture()
             return
+        if path == "/runtime-charts":
+            # Explicit test-only library stubs, not real third-party distributions.
+            page = """<!doctype html><html><body>
+            <canvas id="generic" width="200" height="100"></canvas>
+            <svg id="plain-svg" width="20" height="20"></svg>
+            <script id="__NEXT_DATA__" type="application/json">{}</script>
+            <script>
+              window.Chart = function TestChart(){};
+              window.Chart.version = "4.4.1";
+              window.Chart.instances = { one: {} };
+              window.Highcharts = {version:"11.3.0",charts:[{}]};
+              window.d3 = {version:"7.9.0"};
+              setTimeout(() => {
+                const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
+                svg.setAttribute("width","300");
+                svg.setAttribute("height","160");
+                document.body.appendChild(svg);
+                setTimeout(() => {
+                  svg.setAttribute("class", "highcharts-root");
+                  svg.setAttribute("viewBox", "0 0 300 160");
+                }, 70);
+                const div = document.createElement("div");
+                div.setAttribute("_echarts_instance_", "PRIVATE_INSTANCE_VALUE");
+                const canvas = document.createElement("canvas");
+                div.appendChild(canvas);
+                document.body.appendChild(div);
+              }, 40);
+            </script></body></html>"""
+            self._dynamic_response(page.encode(), "text/html; charset=utf-8")
+            return
         if path == "/runtime-connections":
             page = """<!doctype html><html><body><script>
             setTimeout(() => {

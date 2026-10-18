@@ -51,11 +51,11 @@ def to_markdown(result: dict) -> str:
         lines[0] = "# Fable 5.1 Web Catcher — 런타임 브라우저 관찰 보고서"
         for i, line in enumerate(lines):
             if line.startswith("- 분석 모드:"):
-                lines[i] = "- 분석 모드: `runtime` — Chromium 실제 XHR/fetch·WebSocket·SSE 관찰"
+                lines[i] = "- 분석 모드: `runtime` — Chromium 실제 XHR/fetch·WebSocket·SSE 및 차트 DOM 관찰"
             elif line.startswith("- 정적 GET 1페이지"):
                 lines[i] = "- 격리 브라우저로 페이지만 열고 제한적으로 스크롤했습니다. 로그인·클릭·폼 제출은 하지 않았습니다."
             elif line.startswith("- Step 1의 API"):
-                lines[i] = "- Step 2 단위 3에서 XHR/fetch 및 WebSocket·SSE 연결을 수집하며 차트 연관 분석은 아직 비활성화되어 있습니다."
+                lines[i] = "- Step 2 단위 4에서 런타임 기술과 차트 DOM 후보를 수집하지만 차트↔API 연결은 아직 추정하지 않습니다."
         runtime = result.get("runtime", {})
         index = lines.index("## 한계 및 주의")
         lines[index:index] = [
@@ -65,8 +65,40 @@ def to_markdown(result: dict) -> str:
             f"- 스크롤: {runtime.get('scroll_steps', 0)}회",
             f"- XHR/fetch 요청 관찰 수: {runtime.get('xhr_fetch_requests_seen', 0)}",
             f"- XHR/fetch 응답 관찰 수: {runtime.get('xhr_fetch_responses_seen', 0)}",
-            "- 차트 라이브러리·차트 연관 및 번들 문자열 분석은 아직 구현하지 않았습니다.", "",
+            "- 알려진 차트 라이브러리 전역/DOM 후보만 탐지합니다. 차트↔API 연관·번들 문자열 분석은 아직 미구현입니다.", "",
         ]
+        tech = runtime.get("technologies", [])
+        charts = result.get("charts", [])
+        chart_lines = ["## 런타임 기술 근거 및 차트 DOM 후보", "",
+                       f"- 런타임 기술 흔적: {len(tech)}건",
+                       f"- SVG/canvas 차트 후보: {len(charts)}건",
+                       "- 라이브러리 로드와 실제 차트 인스턴스는 구별합니다.",
+                       "- DOM 최초 등장 시각은 렌더 완료 시각이 아닙니다.",
+                       "- canvas 픽셀 갱신은 MutationObserver로 감지할 수 없습니다.",
+                       "- 단순 SVG/canvas는 차트로 확정하지 않습니다.", ""]
+        for item in tech:
+            chart_lines.append(
+                f"- 기술 {item['name']} · version {item['version'] or 'unknown'}"
+                f" · 전역/마커 근거 {item['evidence']}"
+                f" · 관찰된 인스턴스 {item['instances_observed']}건"
+            )
+        for item in charts[:40]:
+            chart_lines.append(
+                f"- 후보 {item['id']} · {item['library']} · {item['detection_level']}"
+                f" · confidence {item['detection_confidence']:.2f}"
+                f" · selector {item['selector']}"
+                f" · 첫 관찰 UTC ms {item['first_seen_ms']}"
+                f" · 속성 갱신 UTC ms {item['last_observed_update_ms']}"
+                f" · 근거 {','.join(item['library_evidence']) or 'none'}"
+                f" · 연관 API 후보 {len(item['data_sources'])}건"
+            )
+        if len(charts) > 40:
+            chart_lines.append(f"- 보고서 표시 생략: {len(charts)-40}건")
+        if runtime.get("chart_observer", {}).get("observation_capped"):
+            chart_lines.append("- DOM 관찰 상한 적용: 일부 노드/변경은 미관찰 가능")
+        chart_lines.append("")
+        index = lines.index("## 한계 및 주의")
+        lines[index:index] = chart_lines
         connections = result["api"]["connections"]
         connection_lines = ["## 실제 관찰 WebSocket / SSE 연결", "",
                             f"- 관찰 연결 수: {len(connections)}건",

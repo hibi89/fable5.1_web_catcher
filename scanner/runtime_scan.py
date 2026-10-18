@@ -1,7 +1,8 @@
 """Isolated Chromium runtime navigation scaffold (Step 2, unit 1).
 
 Observed XHR/fetch and WebSocket/SSE connection metadata are enabled.
-Chart library detection and chart mapping remain out of scope.
+Known runtime library markers and DOM chart candidates are enabled.
+Chart-to-API scoring and bundle analysis remain out of scope.
 """
 from __future__ import annotations
 
@@ -10,6 +11,7 @@ from urllib.parse import urlsplit
 from .sanitize import safe_url
 from .network import NetworkCollector
 from .connections import ConnectionCollector
+from .runtime_detect import CHART_OBSERVER_SCRIPT, collect_runtime_charts
 
 # Installed by Playwright BEFORE navigation, to observe page timings only.
 # No site state, forms, cookies, or storage are changed by this script.
@@ -68,7 +70,7 @@ def scan_runtime_page(url: str, result: dict, *, timeout: float, wait: float, he
         'xhr_fetch_requests_seen': 0,
         'xhr_fetch_responses_seen': 0,
     }
-    warnings.append('Step 2 부분 구현: XHR/fetch·WebSocket·SSE 메타데이터 수집. 차트·번들은 아직 미구현입니다.')
+    warnings.append('Step 2 부분 구현: 런타임 기술·차트 DOM 후보 수집. 차트↔API 연결 점수·JS 번들은 아직 미구현입니다.')
     try:
         from playwright.sync_api import Error as BrowserError
         from playwright.sync_api import TimeoutError as BrowserTimeoutError
@@ -90,6 +92,7 @@ def scan_runtime_page(url: str, result: dict, *, timeout: float, wait: float, he
                 page.set_default_timeout(int(timeout * 1000))
                 # Register before any navigation, including redirect and early events.
                 page.add_init_script(_INIT_OBSERVER)
+                page.add_init_script(CHART_OBSERVER_SCRIPT)
                 network = NetworkCollector(result)
                 connections = ConnectionCollector(result)
                 network.attach(page)
@@ -117,6 +120,11 @@ def scan_runtime_page(url: str, result: dict, *, timeout: float, wait: float, he
                             result['target']['stylesheets'] = _script_urls(page, 'link[rel~=stylesheet][href]', 'href')
                     except Exception:
                         warnings.append('브라우저 DOM 일부 메타데이터 조회 실패')
+                    try:
+                        if page:
+                            collect_runtime_charts(page, result)
+                    except Exception:
+                        warnings.append('차트 DOM/런타임 증거 조회 실패: 기존 부분 결과 보존')
                     try:
                         network.finalize()
                         result['runtime']['xhr_fetch_requests_seen'] = len(result['api']['endpoints'])
