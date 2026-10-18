@@ -105,7 +105,7 @@ def main():
                     state["enabled"] = True
                     append(ident, answer.get("bufferedData"))
                 except Exception as exc:
-                    state["error"] = type(exc).__name__
+                    state["error"] = type(exc).__name__ + ": " + str(exc).splitlines()[0][:220]
 
             def on_data(event):
                 ident = event["requestId"]
