@@ -299,3 +299,57 @@ Playwright `--record`로 수동 탐색 시 승인한 정확한 `--allow-origin`�
 승인된 `--record` XHR/fetch JSON 응답의 디코딩 전체 크기가 128KiB를 초과하면 전체 본문을 분석하지 않는 기존 정책을 유지합니다. 대신 Chromium CDP로 수신 시점의 첫 **최대 32KiB**를 일시적으로 관찰하고 그 안에 **완전하게 닫힌 첫 JSON 객체**가 있으면 키 이름과 타입만 `json_prefix_structure`에 기록합니다. `completeness=partial_prefix_only`이므로 전체 JSON 스키마나 차트/API의 인과 관계를 증명하지 않습니다. 응답 본문 값은 저장하지 않고, 로그에 실제 필드명을 출력하지 않습니다. 최대 20개 스트림/10개 부분 힌트 상한이 적용됩니다. CDP의 브라우저 내부 메모리를 절대 제한하는 기능은 아닙니다.
 
 관련 근거와 테스트: `docs/STEP3_PARTIAL_LARGE_JSON_PREFIX_2026-10-19.md`.
+
+## Step 4 — 사용자가 명시적으로 켜는 OpenAI 보고서
+
+Step 1~3 스캔은 **OPENAI_API_KEY 없이 종전처럼 동작**합니다. API 키가 환경변수에 존재해도 `--llm`을 쓰지 않으면 모델 API를 호출하지 않습니다. Step 4는 기존 스캔의 서버 내부 코드/DB/원본 페이지를 알아내는 기능이 아니라 **값 없는 관찰 근거만 재해석**하는 선택적 보고서입니다.
+
+### 설치 및 설정 (PowerShell)
+
+```powershell
+python -m pip install -r requirements.txt
+# Step 2/3 Chromium이 필요한 경우: python -m playwright install chromium
+$env:OPENAI_API_KEY = "본인_API_키"   # 파일/저장소에 쓰지 말고 실제 실행 환경변수로만 지정
+$env:OPENAI_MODEL = "본인_계정에서_사용_가능한_정확한_모델_ID"
+```
+
+모델을 코드에서 추측하거나 자동으로 기본 지정하지 않습니다. 실제 모델 ID는 계정의 API 사용 권한과 공식 지원 모델 목록을 확인하세요. OpenAI API는 ChatGPT 구독과 과금이 별도일 수 있습니다. 모델별 비용/토큰은 실행 환경과 가격 정책에 따라 달라지므로 고정 가격을 약속하지 않습니다.
+
+### 먼저 dry-run으로 전송 자료 검토 (API 비용 0)
+
+```powershell
+python scan.py "https://본인이-검사할-사이트" --out ./out/demo
+python scan.py --from-result ./out/demo/result.json --llm-dry-run
+notepad ./out/demo/llm_payload.preview.json
+```
+
+`--llm-dry-run`은 로컬에서 동일한 payload builder를 이용해 `llm_payload.preview.json`을 생성하며 **OpenAI API/외부 서비스 호출 0회**입니다. 미리보기에서 호스트명·사람 이름·이메일·경로·JSON 키가 충분히 익명화됐는지 직접 확인하세요. 프로그램의 정규식·허용목록만으로 모든 개인/기업 비밀이 익명화됐다고 보장할 수는 없습니다.
+
+### 명시적 호출
+
+```powershell
+python scan.py "https://본인이-검사할-사이트" --runtime --llm --model "실제_MODEL_ID" --out ./out/demo
+python scan.py "https://본인이-권한을-보유한-사이트" --record --llm --model "실제_MODEL_ID" --out ./out/demo
+python scan.py --from-result ./out/demo/result.json --llm --model "실제_MODEL_ID"
+```
+
+`--record`를 사용하면 사용자가 로컬 Chromium에서 직접 클릭·로그인·필터 변경하고 종료해야 합니다. 직접 로그인 입력이나 쿠키 원문은 모델에 보내지 않습니다.
+
+### 외부 전송 범위 / 한계
+
+- 허용하는 것: **로컬 규칙 엔진의 기술명/휴리스틱 점수**, 마스킹·제한된 evidence ID/구조적 단서, 호스트 대신 `origin_1` 등의 별칭으로 표현된 API 경로, HTTP method/status/content-type, 값 없는 JSON 필드 자료형 구조, 차트 타입 및 이미 관찰된 연관 후보, 생략/경고 개수, 시각 차이.
+- 전송하지 않는 것: 원본 result.json, HTML/JS, 쿠키와 인증값, response.body, 폼값, 사용자 조작 원문, 로그인/세션, 원래 URL의 host/query/fragment, 임의 이름·전화번호·이메일·개인 식별 가능한 JSON key 및 비신뢰 경고 원문.
+- 35개 기술에 대한 50개 독립 규칙 신호를 사용하며 헤더/쿠키/메타/자산 경로는 **구현 확증이 아닌 관찰 단서**입니다. 규칙 ID와 검증 메모, 양성/음성 테스트를 `rules/fingerprints.json`에서 확인할 수 있습니다. `JSESSIONID`는 Servlet 계열, `csrftoken`은 Django 후보, `connect.sid`은 Express 확정 아님. 서버/CDN 헤더는 앱 백엔드/DB를 증명하지 못합니다.
+- 전송 데이터는 근거 최대 45, 탐지 결과 35, API 24, 차트 16, 차트↔API 후보 20, 총 28KiB 제한. 부족한 근거는 생략 건수로 표시하며 일부 자료로 판단했음을 명시합니다. 정확한 토큰 수는 SDK의 실제 usage가 반환된 경우에만 기록합니다.
+- 웹페이지의 문자열은 비신뢰 입력으로만 제공하며 모델에 tools/file/network 기능을 연결하지 않습니다. 검증되지 않은 모델의 추측, 새 기술/버전/불확실한 참조는 로컬 검증에서 차단하도록 노력하지만 **모든 환각/프롬프트 주입을 탐지한다고 보장하지 않습니다**.
+- 모델 응답은 JSON schema로 수신한 뒤 로컬에서 참조 ID·문자 길이·추가 필드를 검증합니다. 최종 Markdown은 로컬이 작성하며 원 사이트의 사용 기술과 새로운 재구현 추천을 분리합니다. **매핑은 끝까지 연관 후보이며 인과적 데이터 흐름 확정이 아닙니다.**
+
+### 산출 파일과 실패 처리
+
+기존 `result.json`, `report.md`는 절대 덮어쓰지 않습니다. Step 4가 성공하면 `llm_report.json`(생성 시각, 선택 모델, prompt/payload 버전, 원본 hash, SDK 실제 usage, warnings, 검증된 분석), `llm_report.md`(7개 한국어 섹션)를 별도로 생성합니다.
+
+모델 미지정·API 키 없음·401/403 인증·400/404 모델·스키마 설정·429 한도·서버 5xx·타임아웃·모델 거절·잘린 응답·JSON/ID 검증 실패를 구별해 안내합니다. **429/5xx만 최대 1회 자체 재시도**하고 공식 SDK 자동 재시도를 사용하지 않습니다. 모델 오류나 인증 실패 때는 기존 `report.md`를 보세요. 종료 코드는 기존 스캔 성공 0 / 스캔 자체 오류 2 / LLM 후처리 오류 3입니다.
+
+`pytest -q`는 실제 유료 API를 절대 호출하지 않는 **mock/fixture 테스트**입니다. **실제 OpenAI API smoke는 별도 opt-in**으로 사용자 본인 키·모델 지정과 `--llm` 호출 시에만 수행하며 사용량에 따른 비용이 발생할 수 있습니다. 자동 CI에서는 실제 API 키를 주입하지 않습니다.
+
+**Step 4 기능은 프런트엔드 복제·웹 UI·자동 코드 생성이 아닙니다.** DB/서버를 실제 조사했다고 주장하지 않으며, 프리랜서 재구현 제안은 원사이트 기술과 엄격히 분리합니다.
