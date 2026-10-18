@@ -76,7 +76,7 @@ def map_chart_api_candidates(result: dict) -> None:
     Cases with multiple plausible chart-shaped responses are *not* ranked by
     timing. Mark them as ambiguous and emit no guessed link.
     """
-    if result.get("scan_mode") != "runtime":
+    if result.get("scan_mode") not in ("runtime", "record"):
         return
     api = result.setdefault("api", {})
     charts = result.get("charts", [])
@@ -98,7 +98,10 @@ def map_chart_api_candidates(result: dict) -> None:
         eligible = []
         for row in endpoints:
             ok, delta = _qualified_api(row, stamp)
-            if ok and type(row.get("id")) is str and row["id"].startswith("api-"):
+            if (ok and type(row.get("id")) is str and row["id"].startswith("api-")
+                    and (result.get("scan_mode") != "record" or (
+                        row.get("page_id") == chart.get("page_id")
+                        and row.get("navigation_id") == chart.get("navigation_id")))):
                 eligible.append((row, delta))
         if len(eligible) > 1:
             ambiguous += 1
@@ -119,6 +122,20 @@ def map_chart_api_candidates(result: dict) -> None:
             "time_delta_ms": delta,
             "limitations": list(LIMITATIONS),
         }
+        if result.get("scan_mode") == "record":
+            markers = result.get("record", {}).get("interactions", [])
+            matched = any(
+                marker.get("page_id") == chart.get("page_id")
+                and marker.get("navigation_id") == chart.get("navigation_id")
+                and isinstance(marker.get("at_ms"), int)
+                and 0 <= endpoint["request_started_at_ms"] - marker["at_ms"] <= 2000
+                for marker in markers
+            )
+            if matched:
+                link["confidence"] = min(0.7, round(link["confidence"] + 0.03, 3))
+                link["reasons"].append("preceding_manual_interaction_marker")
+                link["evidence"].append("preceding_manual_interaction_marker")
+                link["limitations"].append("interaction_does_not_prove_causality")
         api["chart_candidates"].append(link)
         chart["data_sources"] = [endpoint["id"]]
 
