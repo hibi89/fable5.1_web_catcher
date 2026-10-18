@@ -5,6 +5,7 @@ import argparse
 import sys
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from scanner.fingerprints import apply_fingerprints
 from scanner.models import blank_result, ensure_unknown
@@ -22,6 +23,13 @@ def scan(url: str, out: Path, timeout: float = 10.0, *, runtime: bool = False,
     try:
         sanitized_request = request_url(url)
         if runtime:
+            # Hash fragments drive client-side dashboard routing. Browsers do not
+            # send fragments over HTTP; output safe_url() still omits them.
+            fragment = urlsplit(url).fragment
+            if fragment and len(fragment) <= 512:
+                sanitized_request += '#' + fragment
+            elif fragment:
+                result['warnings'].append('브라우저 화면 해시 길이 상한 초과: fragment 생략')
             from scanner.runtime_scan import scan_runtime_page
             fatal = scan_runtime_page(sanitized_request, result, timeout=timeout, wait=wait, headed=headed)
         else:
