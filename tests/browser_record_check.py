@@ -530,6 +530,11 @@ def test_real_headed_approved_gzip_without_length_bounded_by_decoded_bytes():
             if permitted and actual == 'compressed_decoded_unavailable':
                 assert row['json_structure'] is None
                 assert row.get('json_prefix_structure') is None
+                assert row.get('cdp_decoded_diagnostic') in (
+                    'request_unmatched', 'request_ambiguous', 'loading_failed',
+                    'invalid_data_length', 'loading_incomplete',
+                    'no_data_events', 'nonpositive_decoded_length',
+                    'diagnostic_unavailable')
             else:
                 assert actual == expected, row
                 if expected == 'structure_only':
