@@ -1,32 +1,36 @@
-# HANDOFF.md — Fable 5.1 Web Catcher Step 2 단위 4
+# HANDOFF.md — Fable 5.1 Web Catcher / Step 2 단위 5
 
-## ① 목표·용도·확정 요구·기술
-공개 URL의 근거 기반 정적/동적 기술 분석 CLI. Python 3.11+, requests, BeautifulSoup, Playwright/Chromium. 사용자 원본 fable5.1_step1.txt와 fable5.1_step2.txt. Step 1은 완료, Step 2는 1~4단위만 완료. 실제 사이트 코드·DB 복원 아님.
+## ① 목표·확정 요구·기술
+공개 URL 정적 기술 단서와 Chromium 실행 중 API/차트 단서를 수집하는 Python 3.11+ CLI. 요구 원본은 사용자 첨부 fable5.1_step1.txt 및 fable5.1_step2.txt. requests/BeautifulSoup + Playwright Chromium. Step 1 완료, Step 2 단위 1~5 완료(전체 미완료). 서버 내부 코드·DB·확정 데이터 lineage 추출 아님.
 
 ## ② 완료 기능·변경·결정 근거
-정적 기본 CLI 및 앞선 런타임 기능 유지. 새 scanner/runtime_detect.py: 페이지 이동 전 JS MutationObserver 설치, 초기 및 추가 SVG/canvas/관련 속성 변경(상한 80 후보·1200 mutation), 첫 관찰 및 업데이트 UTC epoch ms, 구조적 selector, 휴리스틱 confidence, 라이브러리 근거 및 빈 data_sources 기록. Next.js, Nuxt, Highcharts, Chart.js, ECharts, Plotly, ApexCharts, D3의 명시적 전역/마커만 읽기 전용 확인. Chart.instances/Highcharts.charts 개수를 확인할 수 있는 경우와 단순 라이브러리 로드를 구분. D3 존재·canvas/svg만으로 차트 확정 금지. runtime_scan.py 이동 전 설치/종료 관찰, report.py 보고서, fixture·일반/브라우저 테스트 및 README/CI 연동.
-대안 비교: CDP 직접 내부 추적은 개발 비용·노출 위험 높음, 알려진 속성+DOM 후보 방식은 낮은 비용과 기존 스키마 재사용에 유리. 인스턴스 확인 불가능한 라이브러리를 억지로 확정하지 않음.
+Step 1 기본 정적 CLI 보존. Step 2: (1) 격리 Chromium, (2) XHR/fetch/값 없는 JSON 구조, (3) WebSocket/SSE 메타데이터, (4) 기술 전역 및 SVG/canvas 차트 DOM 후보, (5) **차트↔실제 관찰 API 보수적 연관 후보**.
+신규 scanner/chart_mapping.py는 명시적인 차트 라이브러리 DOM 마커, 2xx JSON 수치형 시계열 형태, API 응답 후 1200ms 내 DOM 속성 갱신을 모두 요구. 단순 시간 근접·일반 SVG/canvas는 배제. 적합한 API가 2개 이상이면 연결 보류. api.candidates와 charts[].data_sources에는 endpoint ID만 연결하고, 근거·한계 및 0.55~0.65 비확률적 휴리스틱 점수 표시. 반복 일관성 검증 없음.
+대안 A 시간만 비교는 저비용이나 오탐 위험 큼. 대안 B(구조+DOM 마커+순서+경쟁시 보류)는 같은 관찰 데이터만 재사용하고 오탐을 억제하여 채택. 새 네트워크 호출/사이트 변경 없음.
 
-## ③ 테스트 명령·성공/실패 수·검증/미검증
-python -m pytest -q → Windows Python 3.11 42/42 PASS, GitHub Actions run 39117164191. python -m pytest -q tests/browser_runtime_check.py → Ubuntu 실제 Playwright Chromium 5/5 PASS, run 39117164160. 검증 코드 SHA a1a7ae57675c36e2b7673e2156e405ccb70d9ecd. 기존 Step 1 26개 회귀 포함. test stub(Highcharts/Chart.js/D3, Next marker), 일반 SVG/canvas, 지연 SVG 마커·속성 갱신, ECharts DOM 마커, 비밀값 마스킹 검증. **실제 라이브러리 패키지 통합, 공개 사이트·사용자 PC, Windows headed 미검증**.
+## ③ 테스트 명령·성공/실패·미검증
+Windows Python 3.11 `python -m pytest -q`: **49/49 PASS** (run 39118292918). Ubuntu 실제 Chromium `python -m pytest -q tests/browser_runtime_check.py tests/browser_mapping_check.py`: **7/7 PASS** (run 39118292894). 두 실행 모두 기능 SHA **60469e4b8c58a6f188656639a433c22a65675466**. 실브라우저 내 유일 시계열 API와 동시 로그 요청, 동등한 API 2건 경합 시 연결 보류, 결과 마스킹 및 보고서 섹션 검증.
+미검증: 실제 공개 사이트 정확도, 상용 차트 라이브러리 전체 통합, 브라우저/네트워크 반복 일관성, 사용자 Windows headed GUI. 테스트는 실제 Chromium이지만 로컬 모의 서버 기반.
 
-## ④ 완료/진행/대기/차단·중단 지점
-Step 1 원본 완료 조건 7/7 PASS(기존 3 OS 각 26 PASS·Python.org/example.com 정적 smoke). Step 2 단위 1 격리 Chromium, 2 실제 XHR/fetch/JSON 구조, 3 WebSocket/SSE, **4 런타임 기술·차트 DOM 후보** 완료. 차트↔API 후보 점수화, 동일 origin JS 번들 문자열 분석, 최종 통합 검증 대기. 새 ㄱ 전 다음 단위 작업 미착수.
+## ④ 완료·진행·대기·중단점
+Step 1 원본 7/7 완료, Step 2 단위 1~5의 해당 fixture 검증 완료. 단위 6 동일 origin JS 번들 문자열에서 미검증 API 후보 수집은 미착수. 이후 Step 2 보안·오류·전체 통합 검증과 최종 승인 미완료. 사용자 다음 ㄱ 전 추가 단위 진행 금지.
 
-## ⑤ 오류 근거·원인·시도·재시도 금지·대안
-초기 통합 소스 SHA 5621c0e58353c358faa6531df61e1e3dd37d754f의 Chromium run 39117073731은 4 PASS/1 FAIL. SVG tagName 대소문자 검사 오류로 SVG 누락. localName/tagName 소문자 정규화한 SHA a1a7ae57675c36e2b7673e2156e405ccb70d9ecd에서 재검증 5/5 PASS. 이전 로컬 컨테이너 Chromium은 관리자 차단(net::ERR_BLOCKED_BY_ADMINISTRATOR); 우회/반복 금지, GitHub 실제 Chromium 사용. canvas 픽셀 변경은 MutationObserver로 알 수 없고 DOM 첫 관찰은 렌더 완료 시각 아님.
+## ⑤ 오류·시도·재시도 금지·대안
+이번 단위의 통합 대량 GitHub 변경 요청이 도구 안전 검사에서 차단됨. 정상 브랜치 보존 후 변경 파일을 작게 나눠 반영·CI 검증 성공. 같은 대량 요청 반복 금지.
+이전 로컬 개발 컨테이너 Chromium은 net::ERR_BLOCKED_BY_ADMINISTRATOR로 localhost 접근 실패, 우회하지 않음. GitHub Actions 실제 Chromium으로 검증 대체.
+동시 응답은 데이터 사용 입증이 아니므로 confidence를 확률 또는 실제 연결로 표시하지 말 것. SSRF 방어·압축 응답 메모리 완전 상한 미구현.
 
-## ⑥ 저장소·브랜치·SHA·주요 경로
-hibi89/fable5.1_web_catcher (private), main. 검증 소스 SHA a1a7ae57675c36e2b7673e2156e405ccb70d9ecd. 새 모듈 scanner/runtime_detect.py, 기존 scanner/runtime_scan.py, scanner/network.py, scanner/connections.py, scanner/report.py, tests/test_runtime_detect.py, tests/browser_runtime_check.py, tests/fixture_server.py. 이전 안정 단위 3 문서 SHA cb6457c179e1d9f78daec174862f58280a16d235로 이력 복원 가능.
+## ⑥ 저장소·브랜치·SHA·경로
+비공개 hibi89/fable5.1_web_catcher / main. 검증 소스 SHA **60469e4b8c58a6f188656639a433c22a65675466**. 이전 안정 단위 4 문서 HEAD **2b0b5a3a76fa2749979672916a6726997af753bb**. 주요 scanner/chart_mapping.py, scanner/runtime_scan.py, scanner/runtime_detect.py, scanner/network.py, scanner/report.py, tests/test_chart_mapping.py, tests/browser_mapping_check.py, tests/browser_runtime_check.py.
 
-## ⑦ Production URL·Vercel·실행 명령·환경
-배포 미적용(로컬 CLI), Vercel URL·Production SHA 없음. python -m pip install -r requirements.txt; python -m playwright install chromium; python scan.py https://example.com --runtime --wait 10 --out ./out/runtime; 정적은 --runtime 없이. 화면 환경에서 --headed 가능. 테스트 명령 위 ③ 참고. GitHub Actions contents: read.
+## ⑦ Production URL·Vercel·실행 환경
+배포 대상 아님(로컬 CLI), Vercel/Production SHA·URL 미적용. 설치 `python -m pip install -r requirements.txt` 및 `python -m playwright install chromium`. 정적 `python scan.py https://example.com --out ./out/static`. 동적 `python scan.py https://example.com --runtime --wait 10 --out ./out/runtime`. 테스트는 ③ 두 명령.
 
 ## ⑧ 원본·백업·인증 관리·수정 금지
-GitHub main이 코드 기준, fable5.1_step1.txt/fable5.1_step2.txt가 확정 요구 원본. 비밀값·원본 HTML·인증 헤더·쿠키·HAR·storage state 저장 금지, 테스트용 문자열도 출력 검증. 임의 백업/비밀 경로 요청·로그인·WAF 우회 금지. tests/test_static.py.bak 보존; force push 금지. 서버용 SSRF 차단 프록시 미구현으로 공개 URL 스캔 서비스로 무단 배포 금지.
+원본 사용자 요구 첨부 fable5.1_step1.txt, fable5.1_step2.txt. GitHub main 단일 기준, 이전 커밋으로 복구 가능(강제 push 금지). 원본 응답/HTML/HAR/쿠키·인증 헤더/storage state·비밀값 GitHub 및 출력 저장 금지. tests/test_static.py.bak 보존. 무단 로그인·경로 probing·인증 우회 금지.
 
-## ⑨ 다음 작업 우선순위·절차·완료 기준·승인 사항
-다음 ㄱ 한 단위는 **Step 2 단위 5: 차트↔관찰 API 연관 후보**. 양쪽 UTC epoch ms, JSON 구조의 수치/시계열 특성, 반복 일관성·동시 다중 요청 경쟁을 함께 평가. ±500ms 단독으로 확정 금지. confidence/reasons/limitations과 '연관 후보' 표기, 근거 부족하면 data_sources 빈 배열. 무관한 근접 요청이 연결되지 않도록 로컬 fixture 및 Chromium 회귀 테스트. JS 번들 분석은 그 이후.
+## ⑨ 다음 ㄱ 단위·승인 사항·완료 기준
+Step 2 단위 6: 브라우저에서 **이미 로드된 동일 origin JS 번들**의 제한 문자열 증거를 토대로 미검증 API 후보를 수집. 크기·개수·시간 상한, 원본 번들 및 민감정보 비저장, 기존 실제로 관찰한 API와 후보를 분리. 추가 임의 경로 탐색 금지. fixture·Windows·Chromium 회귀 및 보안 검증 통과가 완료 기준. 이후 전체 Step 2 검수는 별도 단위.
 
-## ⑩ 갱신 일시(KST)·확인 시점·검증 범위·문서 기준 커밋
-2026-10-18 KST. Windows run 39117164191 42 PASS, Chromium run 39117164160 5 PASS 검증 시점 2026-10-18 18:55 KST. 기능 기준 SHA a1a7ae57675c36e2b7673e2156e405ccb70d9ecd. 문서 자체 커밋 SHA는 GitHub 재조회로 확인할 것. Step 2 전체 완료 아님.
+## ⑩ 갱신·검증 시각(KST)·기준 커밋
+2026-10-18 **19:12 KST** 검증 기록 기준. Windows run 39118292918 49 PASS, Chromium run 39118292894 7 PASS. 기능 SHA 60469e4b8c58a6f188656639a433c22a65675466. 문서 HEAD SHA는 저장 후 재조회로 검증. 사용자 PC·실사이트·Step 2 전체 미검증/미완료.
