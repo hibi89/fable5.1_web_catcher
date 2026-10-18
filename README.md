@@ -1,8 +1,10 @@
-# Fable 5.1 Web Catcher — Step 1
+# Fable 5.1 Web Catcher — Step 1 정적 분석 + Step 2 런타임 분석
 
-**Python 3.11+에서 동작하는 공개 웹페이지 기술 단서 정적 분석 CLI**입니다. 읽기 전용 GET 요청으로 URL 한 페이지의 HTML과 응답 메타데이터를 조사한 뒤, 근거 기반으로 프론트엔드 / 백엔드 **추정** / 인프라·CDN 정보를 JSON과 한국어 Markdown으로 기록합니다.
+**Python 3.11+에서 동작하는 공개 웹페이지 기술 단서 정적/Chromium 런타임 분석 CLI**입니다. 읽기 전용 GET 요청으로 URL 한 페이지의 HTML과 응답 메타데이터를 조사한 뒤, 근거 기반으로 프론트엔드 / 백엔드 **추정** / 인프라·CDN 정보를 JSON과 한국어 Markdown으로 기록합니다.
 
 백엔드 소스코드, DB, 비공개 API를 복원하는 도구가 아닙니다. 근거가 없다면 `unknown`입니다. `confidence`는 휴리스틱 점수(0–1)이며 통계적 확률이 아닙니다. 헤더와 쿠키는 변경·위조가 가능하므로 기술 확정 증거가 아닙니다.
+
+**현재 인수검사 (2026-10-18): Step 1 7/7, Step 2 9/9 PASS.** Windows 55/55, 실제 Chromium 11/11, 공개 홈페이지 정적·런타임 4/4 PASS. [Step 2 최종 수용 검사](docs/STEP2_FINAL_ACCEPTANCE.md)를 참조하세요. 기록된 연관 점수는 실제 데이터 lineage가 아닌 휴리스틱 추정입니다.
 
 ## 설치 및 실행
 
@@ -106,7 +108,7 @@ python -m pytest -q
 
 ## Step 2 확장 지점
 
-정적 수집 `scanner/static_scan.py`, 규칙 판정 `scanner/fingerprints.py`, 공통 데이터 `scanner/models.py`, 보고서 `scanner/report.py`가 분리되어 있습니다. 향후 선택적 브라우저 분석 결과도 같은 스키마로 반환할 수 있으나, **현재 API·WebSocket·SSE 및 런타임 차트 DOM 후보 관찰은 구현했고, 차트↔API 연관·JS 번들/Record/LLM/웹 UI는 미구현입니다.**
+정적 수집 `scanner/static_scan.py`, 규칙 판정 `scanner/fingerprints.py`, 공통 데이터 `scanner/models.py`, 보고서 `scanner/report.py`가 분리되어 있습니다. 향후 선택적 브라우저 분석 결과도 같은 스키마로 반환할 수 있으나, **현재 API·WebSocket·SSE·차트 DOM·보수적 차트↔API 후보·JS 번들 문자열 후보까지 Step 2 범위를 구현했습니다. Record/LLM/웹 UI는 범위 밖입니다.**
 
 ## Step 2 — 단위 1: 런타임 브라우저 실행 기반 (부분 구현)
 
@@ -126,7 +128,7 @@ python scan.py https://example.com --runtime --headed --wait 10 --out ./out/runt
 오류가 나면 부분 JSON/보고서를 남기고 종료 코드 2를 반환합니다.
 Step 2 단위 1 당시의 `runtime.scope=navigation_only`는 실행 기반만 구현했다는 표시였습니다. 현재 값은 `network_and_connections_metadata`입니다.
 추가된 `runtime.xhr_fetch_requests_seen`·`runtime.xhr_fetch_responses_seen`는 개수만 기록합니다.
-단위 1 당시 API·차트 분석은 미구현이었지만 현재 단위 2~4의 API/WS/SSE/차트 DOM 관찰을 구현했습니다. 연관 점수화와 번들 탐지는 미구현입니다.
+단위 1 당시에는 API·차트 분석이 미구현이었습니다. 현재는 단위 1~6 및 Step 2 최종 인수검사를 완료했으며 아래 단위별 설명은 개발 이력입니다.
 따라서 이번 단위 결과를 Step 2 완료라고 해석하지 마세요.
 
 테스트는 두 종류로 구분합니다.
@@ -165,8 +167,8 @@ JSON 중첩 5단계, 객체 키 24개, 배열 표본 3개로 제한합니다.
 오프라인 단위 테스트: `python -m pytest -q tests/test_network.py`
 (일반 전체: `python -m pytest -q`).
 실제 Chromium fixture: `python -m pytest -q tests/browser_runtime_check.py`.
-단위 5에서는 근거가 유일할 때만 api.candidates와 charts[].data_sources에 연관 후보를 기록하며, 근거가 부족하거나 경쟁 응답이 있으면 빈 배열입니다.
-WS/SSE 단위 3, 차트 DOM 후보 단위 4, 보수적 차트↔API 후보는 단위 5에서 구현했습니다. JS 번들은 미구현입니다.
+단위 5에서는 근거가 유일할 때만 api.chart_candidates와 charts[].data_sources에 연관 후보를 기록하며, 근거가 부족하거나 경쟁 응답이 있으면 빈 배열입니다.
+WS/SSE 단위 3, 차트 DOM 단위 4, 차트↔API 연관 단위 5, JS 번들 문자열 단위 6까지 구현했습니다.
 
 ## Step 2 — 단위 3: WebSocket·SSE 연결 관찰
 
@@ -182,7 +184,7 @@ python -m pytest -q tests/test_connections.py
 python -m pytest -q tests/browser_runtime_check.py
 ```
 
-알려진 차트 라이브러리/DOM 후보는 단위 4에서 구현했고, 단위 5는 API 연관 후보만 제공합니다. 번들 분석은 미구현입니다.
+차트 DOM은 단위 4, 연관 후보는 단위 5, 번들 문자열은 단위 6에서 구현했습니다.
 
 ## Step 2 — 단위 4: 런타임 기술·차트 DOM 후보
 
@@ -196,20 +198,30 @@ DOM 최초 등장 시각은 렌더 완료가 아니며 MutationObserver는 canva
 Unit tests: python -m pytest -q tests/test_runtime_detect.py
 Chromium fixture: python -m pytest -q tests/browser_runtime_check.py
 라이브러리 전역은 테스트용 stub으로 검증했습니다. 실제 배포 라이브러리 통합 테스트는 별도입니다.
-차트↔API 후보 점수는 단위 5에서 구현했고 JS 번들 문자열 탐지는 미구현입니다.
+차트↔API 후보 점수는 단위 5, JS 번들 문자열 탐지는 단위 6에서 구현했습니다.
 
 ## Step 2 — 단위 5: 차트↔API 연관 후보
 
 차트 라이브러리 DOM 마커, 응답이 완료된 2xx JSON의 시간·수치형 시계열 구조, 응답 후 최대 1200ms 이내 DOM 속성 갱신을 함께 확인합니다. 단순 시간 일치나 일반 SVG/canvas는 연결하지 않으며 동등한 적격 API가 2개 이상이면 연결을 보류합니다.
 
-api.candidates에는 chart_id, endpoint_id, candidate_only 상태, 비확률적 confidence(0.55~0.65), 근거 및 한계를 보관합니다. charts[].data_sources는 후보 endpoint ID를 가리킵니다. 실제 데이터 연결의 증명이 아니며 반복 일관성도 검증하지 않았습니다. 추가 API 호출이나 원본 응답 저장은 없습니다.
+api.chart_candidates에는 chart_id, endpoint_id, candidate_only 상태, 비확률적 confidence(0.55~0.65), 근거 및 한계를 보관합니다. charts[].data_sources는 후보 endpoint ID를 가리킵니다. 실제 데이터 연결의 증명이 아니며 반복 일관성도 검증하지 않았습니다. 추가 API 호출이나 원본 응답 저장은 없습니다.
 
 테스트: `python -m pytest -q`와 `python -m pytest -q tests/browser_runtime_check.py tests/browser_mapping_check.py`. 번들 단서 및 전체 Step 2 검증은 이후 별도 단위입니다.
 
 ## Step 2 — 단위 6: 이미 로드된 JS 번들의 미검증 API 문자열 후보
 
-브라우저가 실제로 로드한 **같은 출처**의 JavaScript 응답 중 MIME/상태/Content-Length와 requestfinished가 확인된 응답만 분석합니다. 새로운 요청·경로 탐색은 실행하지 않습니다. JS 파일당 128KiB, 최대 12개 파일/스크립트별 15개 및 전체 30개 후보로 제한합니다. 크기 불명·미완료·교차 출처 JS는 본문을 읽지 않습니다.
+브라우저가 실제로 로드한 **같은 출처**의 JavaScript 응답 중 MIME/상태/Content-Length와 requestfinished가 확인된 응답만 분석합니다. 새로운 요청·경로 탐색은 실행하지 않습니다. JS 파일당 128KiB, 최대 10개 파일/스크립트별 15개 및 전체 30개 후보로 제한합니다. 크기 불명·미완료·교차 출처 JS는 본문을 읽지 않습니다.
 
-짧고 제한된 따옴표 문자열 중 API/GraphQL 경로만 추출해 query/민감 경로를 버리고 `api.bundle_candidates`에 `unverified_string_literal`/observed_request=false로 저장합니다. 실제 `api.endpoints`의 관찰 결과와 다르며, JS 문자열이 실제 사용된 API를 의미하지 않습니다. 원본 JS·코드 스니펫·쿼리 비밀값은 저장하지 않습니다. 압축 응답 처리의 메모리 절대 상한은 보장하지 못합니다.
+짧고 제한된 따옴표 문자열 중 API/GraphQL 경로만 추출해 query/민감 경로를 버리고 `api.candidates`에 source_script, discovered_by=bundle_string, `unverified_string_literal`/observed_request=false로 저장합니다. 실제 `api.endpoints`의 관찰 결과와 다르며, JS 문자열이 실제 사용된 API를 의미하지 않습니다. 원본 JS·코드 스니펫·쿼리 비밀값은 저장하지 않습니다. 압축 응답 처리의 메모리 절대 상한은 보장하지 못합니다.
 
-테스트: `python -m pytest -q` 및 `python -m pytest -q tests/browser_runtime_check.py tests/browser_mapping_check.py tests/browser_bundle_check.py`. 실사이트 정확도·사용자 PC·Step 2 최종 통합/보안 검증은 다음 단위입니다.
+테스트: `python -m pytest -q` 및 `python -m pytest -q tests/browser_runtime_check.py tests/browser_mapping_check.py tests/browser_bundle_check.py`. 최종 통합/보안 fixture 검증과 공개 홈페이지 구조 검사까지 통과했습니다. 개인 Windows PC/모든 실사이트 탐지 정확도는 별도 미검증 한계입니다.
+
+## 최신 Step 2 결과 스키마 요약
+
+- `api.endpoints`: 실제 관찰된 XHR/fetch 요청/응답의 마스킹 메타데이터 및 값 없는 JSON 구조
+- `api.connections`: 실제 관찰 WebSocket/SSE 연결 메타데이터
+- `api.candidates`: 이미 로드된 동일 출처 JS 문자열의 **미검증** API 경로 (`source_script`, `discovered_by=bundle_string`)
+- `api.chart_candidates`: 차트와 API의 **연관 후보** (`chart_id`, `endpoint_id`, `confidence`, `reasons`, `limitations`)
+- `charts[].data_sources`: 연관 후보의 endpoint ID, 실제 데이터 흐름 확정 아님
+
+최종 검사 명령: `python -m pytest -q`; Chromium fixture는 `python -m pytest -q tests/browser_runtime_check.py tests/browser_mapping_check.py tests/browser_bundle_check.py tests/browser_final_check.py`. 별도 공개 URL smoke는 `python -m pytest -q -s tests/public_runtime_smoke.py`이며 네트워크 의존으로 CI에서는 비필수입니다.
