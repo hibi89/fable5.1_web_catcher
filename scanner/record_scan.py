@@ -353,8 +353,9 @@ def run_record(url: str, result: dict, *, timeout: float,
                             result['frontend'].append({
                                 'name': item['name'], 'version': item.get('version'),
                                 'confidence': 0.8, 'evidence_ids': [eid]})
-                except BrowserError:
-                    pass
+                except Exception as exc:
+                    if 'Record 차트 스냅샷 오류:' not in result['warnings']:
+                        result['warnings'].append('Record 차트 스냅샷 오류: ' + type(exc).__name__)
                 try:
                     value = pg.evaluate('() => window.__fable51_interactions && window.__fable51_interactions.snapshot()')
                     if isinstance(value, dict):
