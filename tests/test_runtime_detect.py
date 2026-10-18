@@ -84,6 +84,8 @@ def test_evidence_merged_with_existing_frontend_schema():
             if self.calls == 1:
                 return {"charts": [_candidate()], "initialized": True,
                         "mutation_count": 2, "capped": False}
+            if self.calls == 3:
+                return []  # new read-only CSS group observation
             return [{"name": "Next.js", "version": None, "instances_observed": 0,
                      "evidence": "next_data_marker"},
                     {"name": "D3", "version": "7.9.0", "instances_observed": 0,
@@ -101,3 +103,16 @@ def test_evidence_merged_with_existing_frontend_schema():
     assert result["runtime"]["chart_observer"]["mutation_count"] == 2
     assert all(ref in {ev["id"] for ev in result["evidence"]}
                for row in result["frontend"] for ref in row["evidence_ids"])
+
+
+
+def test_css_bar_candidate_normalization_low_confidence_and_no_private_style_values():
+    candidate = _candidate(selector="body:nth-of-type(1) > div:nth-of-type(4)")
+    candidate["library_evidence"] = ["css_bar_group_pattern"]
+    candidate["detection_confidence"] = 0.5
+    chart, _, _ = normalize_probe({"charts": [candidate]}, [])
+    assert len(chart) == 1
+    assert chart[0]["detection_level"] == "css_bar_pattern_candidate"
+    assert chart[0]["library_evidence"] == ["css_bar_group_pattern"]
+    assert chart[0]["library"] == "unknown"
+    assert chart[0]["data_sources"] == []
