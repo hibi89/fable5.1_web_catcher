@@ -1,3 +1,13 @@
+# 2026-10-19 KST — p3 Step 3 CDP 미매칭 진단 코드 완료
+
+- 임시 localhost Chromium 진단 [PR #14](https://github.com/hibi89/fable5.1_web_catcher/pull/14) **closed/unmerged**. 세 번의 8건 샘플에서 판정 시점 `no_cdp_match` 4/8, 5/8, 3/8. 합계 12/24 미매칭이며 500ms 추가 대기로 일관되게 회복되지 않음. **요청 매칭 누락 재현**은 확인했으나 frame/filter/이벤트 배달 등 정확한 원인은 미확정. 24건을 일반 사이트 실패율로 일반화 금지.
+- **[PR #15](https://github.com/hibi89/fable5.1_web_catcher/pull/15) main 병합** `f6cf9577941fff829cab0b827b5b95fd7e8eac88`, tested `385851177b20339c167957d2579bb2a18694b804`: `compressed_decoded_unavailable` 응답에만 **값 없는 CDP 진단 enum `cdp_decoded_diagnostic`**을 추가. 예: `request_unmatched`, `loading_incomplete`, `no_data_events`. 기존 응답 원문 미수집, origin 제한, decoded cap 128KiB 및 성공 분석 판정 불변.
+- 최종 Windows **99/99 PASS** [39145907566](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39145907566), 실제 Chromium **23/23 PASS + 공개 smoke 4/4 PASS** [39145907594](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39145907594). 초기 Chromium 테스트가 22/23 실패한 것은 기존 대용량 gzip 부분 힌트 단위가 CDP 미매칭으로 안전 거부되었기 때문; 안전 거부와 원문 null/진단을 별도 합법 결과로 구별하도록 변경 후 재시험 통과.
+- **성공률 개선이 아니라 실패 이유 가시화** 완료. 실제 사용자 Windows 필터→차트/API 연결과 실제 OpenAI 유료 API는 여전히 미검증. Step1~4 자동/Mock 기준 4/4 유지. 상용제품 총진도 % 미확정.
+- 상세 `docs/STEP3_CDP_MISMATCH_DIAGNOSTICS_2026-10-19.md`. 다음에는 **CDP 요청 추적 개선안의 근거 기반 비교** 또는 사용자 Windows 1회 현장 실증, 동일 임시 실험 반복 금지.
+
+---
+
 # 2026-10-19 KST — p3 Step 4 공식 SDK HTTP 계약 오프라인 검증 (PR #13)
 
 - **[PR #13](https://github.com/hibi89/fable5.1_web_catcher/pull/13) main 병합** SHA `1339baf0a76e291a8f7fea2698b053cf9351c1a2`, 검증 기능 SHA `42f481c821189e54c3b66b00dff17d767351b376`.
