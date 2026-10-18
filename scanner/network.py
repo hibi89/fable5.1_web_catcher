@@ -94,6 +94,7 @@ class NetworkCollector:
         self._over_limit = False
         self._body_limit = False
         self._body_reads = 0
+        self.max_endpoints = MAX_ENDPOINTS
 
     def attach(self, page):
         page.on('request', self.on_request)
@@ -104,7 +105,7 @@ class NetworkCollector:
     def on_request(self, request):
         if request.resource_type not in ('xhr', 'fetch'):
             return
-        if len(self.records) >= MAX_ENDPOINTS:
+        if len(self.records) >= self.max_endpoints:
             self._over_limit = True
             return
         url = request.url
@@ -182,7 +183,7 @@ class NetworkCollector:
             except Exception:
                 row['response_body_analysis'] = 'read_error'
         if self._over_limit:
-            self.result['warnings'].append(f'XHR/fetch 수집 건수 상한 {MAX_ENDPOINTS}건 적용')
+            self.result['warnings'].append(f'XHR/fetch 수집 건수 상한 {self.max_endpoints}건 적용')
         if self._body_limit:
             self.result['warnings'].append(f'JSON 본문 분석 건수 상한 {MAX_JSON_BODIES}건 적용')
         self._request_rows.clear()
