@@ -80,7 +80,16 @@ def main() -> int:
             reconfigure(errors='backslashreplace')
     p = argparse.ArgumentParser(description='공개 URL의 기술 단서 정적/브라우저 관찰')
     p.add_argument('url', nargs='?', help='HTTP/HTTPS 사이트 URL (또는 --from-result 사용)')
-    p.add_argument('--from-result', type=Path, help='저장된 result.json을 재분석 (스캔 생략)')
+    p.add_argument('--from-result', type=Path, help='저장된 result.json 로컬 처리 (스캔 생략)')
+    p.add_argument('--batch', type=Path, help='Step 5: UTF-8 URL 목록 순차 분석')
+    p.add_argument('--compare', type=Path, nargs=2, metavar=('OLD', 'NEW'),
+                   help='Step 5: 두 저장된 result.json 로컬 비교')
+    p.add_argument('--export-contracts', action='store_true',
+                   help='Step 5: --from-result의 관찰 JSON 구조 참고 계약 생성')
+    p.add_argument('--delay', type=float, default=2.0,
+                   help='Step 5: 배치 대상 간 대기(초), 최소 1')
+    p.add_argument('--max-urls', type=int, default=50,
+                   help='Step 5: 배치 고유 URL 상한, 기본 50')
     p.add_argument('--llm', action='store_true', help='명시적으로 OpenAI API 보고서 요청 (비용 가능)')
     p.add_argument('--llm-dry-run', action='store_true', help='네트워크 0회, 외부 전송 예정 자료 파일만 출력')
     p.add_argument('--model', help='OpenAI 모델 ID (기본 OPENAI_MODEL 환경변수, 하드코딩 없음)')
@@ -93,8 +102,27 @@ def main() -> int:
     p.add_argument('--max-duration', type=float, default=900, help='Record 최대 초 (기본: 900)')
     p.add_argument('--allow-origin', action='append', default=[], help='추가 허용 origin (반복 지정 가능)')
     args = p.parse_args()
-    if bool(args.url) == bool(args.from_result):
-        p.error('URL 또는 --from-result 중 하나만 지정하세요.')
+    modes = sum(bool(x) for x in (args.url, args.from_result, args.batch, args.compare))
+    if modes != 1:
+        p.error('URL, --from-result, --batch, --compare 중 하나만 지정하세요.')
+    if args.export_contracts and not args.from_result:
+        p.error('--export-contracts는 --from-result와 함께 사용하세요.')
+    if args.export_contracts and (args.llm or args.llm_dry_run):
+        p.error('--export-contracts와 --llm/--llm-dry-run 동시 사용 불가')
+    if args.batch or args.compare or args.export_contracts:
+        if args.llm or args.llm_dry_run or args.model:
+            p.error('Step 5 배치/비교/계약은 LLM을 호출하지 않습니다.')
+        if args.record or args.allow_origin:
+            p.error('Step 5에서는 --record/--allow-origin 사용할 수 없습니다.')
+    if args.compare or args.export_contracts:
+        if args.runtime or args.headed or args.wait != 10:
+            p.error('로컬 비교/계약 내보내기에는 브라우저 옵션을 사용하지 않습니다.')
+    if args.batch and args.headed and not args.runtime:
+        p.error('--headed는 --batch --runtime과 함께 사용하세요.')
+    if not args.batch and (args.delay != 2 or args.max_urls != 50):
+        p.error('--delay 및 --max-urls는 --batch 전용입니다.')
+    if args.batch and (args.delay < 1 or args.max_urls < 1 or args.max_urls > 500):
+        p.error('배치 --delay >=1, --max-urls 1~500 이내이어야 합니다.')
     if args.llm and args.llm_dry_run:
         p.error('--llm과 --llm-dry-run은 동시에 사용할 수 없습니다.')
     if args.from_result and (args.runtime or args.record or args.headed or
@@ -102,8 +130,8 @@ def main() -> int:
         p.error('--from-result는 브라우저/Record 옵션과 같이 사용할 수 없습니다.')
     if args.llm_dry_run and not args.from_result:
         p.error('--llm-dry-run은 --from-result가 필요합니다.')
-    if args.from_result and not (args.llm or args.llm_dry_run):
-        p.error('--from-result는 --llm 또는 --llm-dry-run이 필요합니다.')
+    if args.from_result and not (args.llm or args.llm_dry_run or args.export_contracts):
+        p.error('--from-result는 --llm/--llm-dry-run/--export-contracts 중 하나 필요')
     if not (0 < args.timeout <= 120):
         p.error('--timeout은 0보다 크고 120 이하이어야 합니다.')
     if not (0 <= args.wait <= 120):
@@ -118,6 +146,31 @@ def main() -> int:
         p.error('--max-duration은 0보다 크고 86400 이하이어야 합니다.')
     if args.allow_origin and not args.record:
         p.error('--allow-origin은 --record 전용입니다.')
+    # Step 5 operations are strictly local unless explicitly scanning a
+    # user-specified batch URL. The LLM SDK is never invoked by these modes.
+    if args.compare:
+        from scanner.compare import run_compare
+        out = args.out or Path('out') / datetime.now().strftime('diff-%Y%m%d-%H%M%S-%f')
+        try:
+            return run_compare(args.compare[0], args.compare[1], out)
+        except (ValueError, OSError) as exc:
+            p.error('결과 비교 실패: ' + str(exc))
+    if args.export_contracts:
+        from scanner.contracts import run_contracts
+        out = args.out or args.from_result.parent / 'contracts'
+        try:
+            return run_contracts(args.from_result, out)
+        except (ValueError, OSError) as exc:
+            p.error('계약 내보내기 실패: ' + str(exc))
+    if args.batch:
+        from scanner.batch import run_batch
+        out = args.out or Path('out') / datetime.now().strftime('batch-%Y%m%d-%H%M%S-%f')
+        try:
+            return run_batch(args.batch, out, scan_fn=scan, runtime=args.runtime,
+                             headed=args.headed, wait=args.wait,
+                             timeout=args.timeout, delay=args.delay, max_urls=args.max_urls)
+        except (ValueError, OSError) as exc:
+            p.error('배치 입력/출력 오류: ' + str(exc))
     import os
     from scanner.llm_flow import run_llm_from_result
     model = args.model or os.getenv('OPENAI_MODEL')
