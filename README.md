@@ -90,6 +90,12 @@ python -m pytest -q
 
 인터넷의 특정 사이트가 특정 기술을 노출한다고 기대하지 않습니다. 성공 판정은 자체 모의 서버·스키마·마스킹·종료 코드 검증만을 기준으로 합니다.
 
+## 자동 검증 (GitHub Actions)
+
+`.github/workflows/windows-python311.yml`은 `main`의 소스·테스트·규칙·워크플로 변경 시와 `main` 대상 PR 또는 수동 실행 시 동작합니다. Windows Server 2022 / Python 3.11에서 새 `.venv-ci`를 만들고 `requirements.txt`를 설치한 뒤 오프라인 pytest를 실행합니다. 토큰 권한은 `contents: read`만 사용하고, 사이트 스캔·배포를 수행하지 않습니다. 한 작업의 제한 시간은 15분입니다.
+
+2026-10-18 CI 검증: 최초 실행에서 리디렉션 stdout `cp1252`의 한글 인코딩 문제가 발견되어 수정했고, [다음 실행](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39111101377)에서 **23 passed**로 최종 검증했습니다. 한글을 표현할 수 없는 출력 스트림은 실행 중단 대신 이스케이프 문자열로 안전하게 출력합니다.
+
 ## Step 2 확장 지점
 
 정적 수집 `scanner/static_scan.py`, 규칙 판정 `scanner/fingerprints.py`, 공통 데이터 `scanner/models.py`, 보고서 `scanner/report.py`가 분리되어 있습니다. 향후 선택적 브라우저 분석 결과도 같은 스키마로 반환할 수 있으나, **현재 Playwright·Record·LLM·웹 UI는 구현하지 않았습니다.**
