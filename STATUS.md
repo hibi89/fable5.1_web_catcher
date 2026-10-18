@@ -1,3 +1,16 @@
+# 2026-10-19 KST — p3 Step 5 구현 및 자동 수용 기준 완료
+
+- **[PR #16](https://github.com/hibi89/fable5.1_web_catcher/pull/16) main 병합** `7de7e26faec46120bbdfb509892ca267cea514c4`, tested source `6f32544299ea5181d4a90321f32e7706857781eb`. Step 5 원본 10/10 자동 인수 기준 PASS.
+- 신규 `scanner/batch.py`: UTF-8 URL 목록 순차 실행(기본 50개/대기 2초), 새로운 타깃마다 `scan()` 재사용·브라우저 격리, 실패 후 계속, 429 이후 동일 origin skip, Ctrl+C 완료분 보존/현재 interrupted/나머지 pending, 안전한 실행별 origin별 별칭·원자적 manifest/summary/Markdown 및 개별 결과. 자동 재개·LLM 호출·병렬 실행 없음.
+- 신규 `scanner/compare.py`: 저장된 두 `result.json`의 기술/버전/점수/evidence/API/JSON 구조/차트 집합 비교. 별도 인터넷·API 호출 0. 서로 다른 원래 origin 자동 연결 금지, 미관찰을 실제 삭제라고 주장하지 않음. 새 `scanner/contracts.py`: 관찰 기반 JSON Schema Draft 2020-12, null/union/빈 배열/부분 구조 unknown, status/mime variant. 서버 required/actual breaking change 확정하지 않음.
+- `scan.py`에 `--batch`, `--compare`, `--export-contracts`, `--delay`, `--max-urls` 추가, 기존 Step1~4 CLI는 그대로 동작. `README.md`에 배치·비교·계약 명령, 종료 정책·보안·한계 설명.
+- **최종 Windows 123/123 PASS** [run 39148097390](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39148097390). **기존 headed Chromium 23/23 PASS + 공개 smoke 4/4 PASS** [run 39148097419](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39148097419).
+- Step5 **3 URL localhost fixture 실제 스캔 → 그중 두 저장 결과 로컬 비교 → 한 결과 contracts.md 생성** 연속 통합 수용 테스트 성공. 추가 익명화된 배치 API 표본으로 실제 Draft2020-12 schema 생성/검증 성공. 이 3 URL은 실제 외부 사이트가 아니라 **localhost fixture**임을 명시.
+- 사용자 제공 지침서 Step1~5 구현·자동/Mock 기준 **5/5 단계 완료**로 유의미하게 상승. 단 Step3 사용자 Windows 실사이트 필터 조작, Step4 실제 OpenAI 유료 API smoke, Step5 복수 실제 외부 사이트 runtime 배치는 여전히 미검증. **상용 제품 모든 환경에서 100%라는 주장은 금지**.
+- 상세 `docs/STEP5_FINAL_ACCEPTANCE_2026-10-19.md`. 다음 단계는 추가 개발 지침 또는 사용자 Windows 최소 1회 최종 수용 검사 선택. 기존 보안·origin 상한·SSRF 경고 유지.
+
+---
+
 # 2026-10-19 KST — p3 Step 3 CDP 미매칭 진단 코드 완료
 
 - 임시 localhost Chromium 진단 [PR #14](https://github.com/hibi89/fable5.1_web_catcher/pull/14) **closed/unmerged**. 세 번의 8건 샘플에서 판정 시점 `no_cdp_match` 4/8, 5/8, 3/8. 합계 12/24 미매칭이며 500ms 추가 대기로 일관되게 회복되지 않음. **요청 매칭 누락 재현**은 확인했으나 frame/filter/이벤트 배달 등 정확한 원인은 미확정. 24건을 일반 사이트 실패율로 일반화 금지.
