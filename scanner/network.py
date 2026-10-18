@@ -110,6 +110,7 @@ class NetworkCollector:
         self.records = result['api']['endpoints']
         self._request_rows = {}
         self._body_queue = {}
+        self._expected_decoded_bytes = {}  # CDP measurement, Record only.
         self._over_limit = False
         self._body_limit = False
         self._body_reads = 0
@@ -224,6 +225,10 @@ class NetworkCollector:
             self._body_reads += 1
             try:
                 body = response.body()  # Request completed; body stays ephemeral.
+                expected = self._expected_decoded_bytes.pop(request, None)
+                if expected is not None and len(body) != expected:
+                    row['response_body_analysis'] = 'decoded_length_mismatch'
+                    continue
                 if len(body) > MAX_JSON_BYTES:
                     row['response_body_analysis'] = 'decoded_too_large'
                     continue
@@ -240,7 +245,8 @@ class NetworkCollector:
         for request, response in list(self._body_queue.items()):
             row = self._request_rows.get(request)
             if row is None or row['response_body_analysis'] not in (
-                    'waiting_for_requestfinished', 'waiting_for_finished_size_check'):
+                    'waiting_for_requestfinished', 'waiting_for_finished_size_check',
+                    'cdp_decoded_waiting_finish', 'cdp_decoded_pending'):
                 self._body_queue.pop(request, None)
 
     def finalize(self):
@@ -252,3 +258,4 @@ class NetworkCollector:
             self.result['warnings'].append(f'JSON 본문 분석 건수 상한 {MAX_JSON_BODIES}건 적용')
         self._request_rows.clear()
         self._body_queue.clear()
+        self._expected_decoded_bytes.clear()
