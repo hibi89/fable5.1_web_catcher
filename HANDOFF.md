@@ -1,3 +1,14 @@
+# p3 Step 3 SVG/CSS 변경 증거 강화 — PR #4 CI 보류 인수 (2026-10-18 22:44 KST)
+
+- 사용자의 `r`을 한글 `ㄱ`으로 해석하여 1단위 개발 진행. PR #4 https://github.com/hibi89/fable5.1_web_catcher/pull/4, 브랜치 `fix/step3-generic-chart-change-evidence-20261018`. **main 미병합**.
+- `scanner/runtime_detect.py`에서 실제 SVG geometry attr/내부 구조 변경과 CSS bar 그룹 퍼센트 차이를 관찰해 원문 없는 `change_evidence` 및 UTC ms만 생성. `scanner/record_scan.py`의 동일 chart key 이전 변화 시각 보존, `scanner/report.py` 변화 근거 표시. 테스트 `tests/test_record.py`, `tests/browser_record_check.py`.
+- V8 순수 JS 문법 검사 성공. 모의 DOM CSS baseline/동일/변화, SVG class-only/geometry 변경 관찰 성공. 실제 전체 fixture 미검증.
+- PR #4 workflow runs **39132765417 Windows**, **39132765458 Ubuntu Chromium**은 실행 단계 0개로 실패, 로그 다운로드 BlobNotFound. Windows 재실행도 단계 0개 실패. GitHub 실행 환경/러너 제약 가능성; 정확한 원인 확인 전 'CI PASS' 주장 금지, PR 병합 금지. 동일 방식 무한 재시도 하지 말 것.
+- branch 상세 문서 `docs/STEP3_GENERIC_CHART_GEOMETRY_PENDING_2026-10-18.md`. 다음 할 일: CI 실패 원인 확인, GitHub runner 회복 또는 별도 실제 Python/Chromium 환경 확보 후 전체 회귀 검증. 통과하면 그때만 병합 및 BOOK 완료 표기.
+- main의 이전 PR #3 완료: Windows 63/63, headed Chromium 20/20, 공개 smoke 4/4 PASS. 사용자 실사이트 신규 JSON 성공과 SVG/CSS↔API 연결은 여전히 미검증. iframe 미지원/SSR F 보안 제한 보존.
+
+---
+
 # Step 3 후속 1단위 완료 — Content-Length 없는 외부 API JSON (2026-10-18 22:30 KST)
 
 ## 새 구현/검증
