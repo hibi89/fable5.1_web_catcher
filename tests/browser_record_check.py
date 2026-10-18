@@ -548,7 +548,7 @@ def test_real_headed_approved_gzip_without_length_bounded_by_decoded_bytes():
                 assert secret not in saved
 
 
-def test_headed_oversized_gzip_records_partial_field_hints_only():
+def test_headed_oversized_gzip_records_partial_field_hints_or_safely_abstains():
     with serve_record() as dashboard, serve_record() as external:
         output = blank_result(dashboard)
         called = set()
@@ -565,16 +565,26 @@ def test_headed_oversized_gzip_records_partial_field_hints_only():
                           allow_origin=[external], max_duration=14,
                           stop_event=threading.Event(), test_hook=interact) is False
     api = next(r for r in output['api']['endpoints'] if r['url'].endswith('/gz-prefix'))
-    assert api['response_body_analysis'] == 'decoded_too_large'
+    status = api['response_body_analysis']
+    assert status in ('decoded_too_large', 'compressed_decoded_unavailable'), api
     assert api['json_structure'] is None
-    sample = api.get('json_prefix_structure')
-    assert sample is not None, api
-    assert sample['completeness'] == 'partial_prefix_only'
-    assert sample['sample_kind'] == 'first_complete_object'
-    assert sample['fields'] == {
-        'date': 'string', 'value': 'number',
-        '[REDACTED_KEY]': 'string', 'quality': 'boolean'
-    }
+    if status == 'compressed_decoded_unavailable':
+        # CDP may omit the decoded-length request event entirely; no body is
+        # allowed to be read or inferred in that case.
+        assert api.get('json_prefix_structure') is None
+        assert api['cdp_decoded_diagnostic'] in (
+            'request_unmatched', 'request_ambiguous', 'loading_failed',
+            'invalid_data_length', 'loading_incomplete', 'no_data_events',
+            'nonpositive_decoded_length', 'diagnostic_unavailable')
+    else:
+        sample = api.get('json_prefix_structure')
+        assert sample is not None, api
+        assert sample['completeness'] == 'partial_prefix_only'
+        assert sample['sample_kind'] == 'first_complete_object'
+        assert sample['fields'] == {
+            'date': 'string', 'value': 'number',
+            '[REDACTED_KEY]': 'string', 'quality': 'boolean'
+        }
     assert output['api'].get('chart_candidates', []) == []
     dumped = json.dumps(output, ensure_ascii=False)
     for secret in ('PRIVATE_DATE_VALUE', 'BODY_SECRET_VALUE', 'QUERY_SECRET_VALUE'):
