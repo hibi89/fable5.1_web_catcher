@@ -23,6 +23,9 @@ from tests.fixture_server import FixtureHandler
 
 
 class RecordHandler(FixtureHandler):
+    # Chunked transfer encoding requires an HTTP/1.1 response.
+    protocol_version = 'HTTP/1.1'
+
     def do_GET(self):
         path = self.path.split('?', 1)[0]
         if path in ('/cross-api-chunked', '/cross-api-chunked-large'):
