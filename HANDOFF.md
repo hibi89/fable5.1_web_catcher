@@ -1,42 +1,43 @@
-# HANDOFF.md — Fable 5.1 Web Catcher / Step 2 단위 2
+# HANDOFF.md — Fable 5.1 Web Catcher / Step 2 단위 3
 
-## 1. 목표·용도·확정 요구·기술
-공개 URL의 정적 HTTP 기술 근거 및 격리 브라우저 런타임 관찰 CLI. Step 1: requests, BeautifulSoup, 자체 핑거프린트. Step 2: 사용자 원본 fable5.1_step2.txt, Python 3.11+, Playwright Chromium, 근거 기반 동적 관찰. Step 2 전체가 아니라 **단위 1~2만 구현/검증 완료**. 사이트 디자인 복제나 서버 내부·DB 추출을 주장하지 않음.
+## ① 목표·용도·확정 요구·기술
+대상: 공개 URL의 근거 기반 기술 관찰 CLI. Step 1은 Python requests/BeautifulSoup 정적 탐지, Step 2는 사용자 첨부 fable5.1_step2.txt를 근거로 Python 3.11+ Playwright/Chromium을 통한 동적 요청·연결·차트 관찰. 이번 ㄱ은 **단위 3: 실제 WebSocket/SSE 연결 메타데이터 수집** 한 단위. Step 2 전체 미완료. 사이트 소스·DB 재현을 보장하지 않음.
 
-## 2. 완료 기능·변경·결정 근거
-- Step 1 정적 명령 및 스키마 유지. Step 2 단위 1의 --runtime, --headed, --wait, 격리 Chromium, DOMContentLoaded, 제한 스크롤, 부분 결과·자원 정리 유지.
-- 단위 2: scanner/network.py에서 실제 관찰한 xhr/fetch request·response·requestfinished·requestfailed 이벤트를 이동 전에 등록. 각 endpoint id, 마스킹된 URL, HTTP method, resource type, UTC epoch ms의 요청/응답 시각, status, content-type, GraphQL 후보(관찰 경로 또는 MIME), JSON 구조·본문 분석 상태를 기록.
-- 응답 원문/요청 본문/헤더 인증정보/쿠키는 결과에 보관하지 않음. 완료된 응답에서 Content-Length가 명시된 128KiB 이하 JSON만 최대 20개 구조 분석. 원시 값이 아닌 필드명·자료형, 객체 최대 24키, 배열 표본 최대 3, 깊이 5. 전체 endpoint 최대 150개. 위험한 JSON 키는 마스킹. 응답 크기 불명·과대·비JSON·실패에도 endpoint 보존.
-- scanner/runtime_scan.py에 collector 연결 및 종료 직전 finalize, scanner/report.py에 실제 API 섹션 추가. tests/fixture_server.py의 브라우저 fixture: 지연 JSON chart API, 시각이 비슷한 무관한 API, 큰 응답, 크기 불명, 비JSON, 잘못된 JSON, 실제 POST /graphql. tests/test_network.py 단위 4건; tests/browser_runtime_check.py 1건 추가 총 3건. runtime CI 트리거 업데이트.
-- 설계 대안: (A) 별도 브라우저 프로그램은 기존 static 모델/마스킹/보고 중복, (B) 기존 모델 재사용+수동 이벤트 컬렉터 분리는 유지보수·비용 면에서 유리해 B 채택. 원본 데이터 비저장과 관찰/분석 책임을 분리.
+## ② 완료 기능·변경·결정 근거
+- Step 1 정적 CLI는 보존. 단위 1 격리 Chromium/--runtime/--headed/--wait/partial 결과와 단위 2 XHR/fetch 엔드포인트·제한 JSON 구조·GraphQL 후보 유지.
+- 신규 scanner/connections.py: 페이지 이동 **전** WebSocket 이벤트와 일반 response 이벤트를 수동 등록해 api.connections에 보관. WebSocket은 id, 마스킹 URL, 관찰 epoch ms, 송/수신 프레임 수, 연결 종료 시각(관찰 때만), 오류 발생 boolean. SSE는 Content-Type text/event-stream 실제 응답만 id, URL, HTTP status, MIME, epoch ms 기록.
+- WebSocket frame payload·socketerror 내용, SSE 이벤트/본문, 인증 헤더·쿠키·HAR·storage state는 읽거나 저장하지 않음. 프레임 이벤트는 카운트만 수행하고 내용은 무시. 최대 연결 60, 방향별 프레임 수 포화 1,000,000.
+- scanner/runtime_scan.py에 collector attach/finalize, scanner/report.py에 연결 섹션, tests/fixture_server.py에 stdlib WebSocket handshake/두 서버 프레임·클라이언트 송신 및 종료하지 않는 SSE, tests/test_connections.py 단위 4개, tests/browser_runtime_check.py 실제 Chromium 통합 1개 추가, README/CI workflow 갱신.
+- 비교: CDP 원시 프레임 추적은 복잡도·민감정보 노출 위험이 크다. Playwright 공식 이벤트로 메타데이터만 수집하는 기존 스키마 확장이 비용·유지보수·보안에 유리. 실제 사이트를 클릭·로그인·우회하는 코드는 없음.
 
-## 3. 테스트 명령·성공/실패 수·검증/미검증
-- 일반/Windows Python 3.11: python -m pytest -q → **34/34 PASS**, 0 FAIL, 6.78초. GitHub Actions run **39115403591**, conclusion success, head **67a8c4132d115e33c3ad0501b642549122eb2e61**. 기존 Step 1 26건 및 단위 1 4건 포함.
-- 실제 Chromium/Ubuntu Python 3.11: python -m pytest -q tests/browser_runtime_check.py → **3/3 PASS**, 0 FAIL, 6.60초, run **39115403678**, conclusion success, 동일 head. 브라우저가 발생시킨 API 7종·응답 상태·JSON 구조·GraphQL POST·비밀값 비저장 및 CLI subprocess 검사.
-- 개발 환경의 보조 순수 Python 단위 4/4 PASS. 실제 브라우저 실험은 격리 GitHub Actions Chromium으로 검증(사용자 PC 실행은 미검증).
-- **미검증:** 공개 실사이트 런타임 정확도, 다양한 사이트의 브라우저 제한, Windows 실제 headed UI, WebSocket/SSE, 차트/번들 및 차트↔API 결합, 실제 사용자의 OS에서 실행.
+## ③ 테스트 명령·성공/실패 수·검증/미검증
+- python -m pytest -q → Windows Server 2022 Python 3.11 GitHub Actions **38/38 PASS** 0 fail, run 39116413660, 최종 대상 SHA f8a4f5dc50cdb4993b0161abb80193e46d00f534. Step 1 기존 26개 포함.
+- python -m pytest -q tests/browser_runtime_check.py → Ubuntu 24.04 / Python 3.11 / 실제 Playwright Chromium, **4/4 PASS** 0 fail, run 39116413676, 동일 SHA. 신규 테스트에서 WebSocket 양방향 프레임 수 >=1, SSE HTTP 200/MIME·URL, 비밀 테스트값 비노출, 완료되지 않은 SSE에서도 제한 시간 내 종료 검증.
+- 최초 코드 SHA a7abd603e8bb1cf33797ed5e32fae459bcae3273의 브라우저 run 39116326072는 **3 PASS / 1 FAIL**: 기존 단위 2 테스트가 runtime.scope 문자열을 이전 값 network_metadata_only로 고정한 회귀 테스트 기대값 불일치. 실사용 신규 WebSocket/SSE 시험은 그 실행에서도 성공. 기존 테스트 기대값만 새로운 network_and_connections_metadata로 고치고 SHA f8a4f5dc50cdb4993b0161abb80193e46d00f534의 CI에서 4/4 PASS 확인.
+- 미검증: 사용자 PC Windows --headed, 임의 실사이트 프레임/스트림 정확도, 실제 API-차트 매핑, 번들 문자열, 모든 OS 브라우저 차이. Step 2 전체 완료 미판정.
 
-## 4. 완료/진행/대기/차단·중단 지점
-- Step 1 원본 요구 완료 기준 7/7 PASS, 과거 Windows/Linux/macOS 각 26/26 PASS 및 두 공개 사이트 JSON/Markdown/evidence 무결성 PASS (docs/STEP1_FINAL_ACCEPTANCE.md).
-- Step 2 단위 1: Chromium 브라우저 실행 기반 완료. 단위 2: xhr/fetch 및 JSON 구조 수집 완료. **Step 2 전체 미완료**.
-- 다음 단위: WebSocket 연결/프레임 수 및 SSE 연결 메타데이터(스트림 body 미독취)·유한 시간 내 종료를 로컬 fixture로 검증. 사용자 다음 ㄱ 전 미착수.
+## ④ 완료/진행/대기/차단·중단 지점
+- Step 1 원본 7/7 완료, 이전 3 OS 각 26/26 PASS·공개 두 사이트 정적 smoke 성공.
+- Step 2 단위 1 브라우저 실행, 단위 2 XHR/fetch+JSON 구조, **단위 3 WebSocket/SSE 연결** 구현·Chromium 테스트 통과.
+- 진행 중/대기: 런타임 기술 라이브러리 추적, DOM/MutationObserver 차트 후보, 차트↔실제 API 근거기반 연관 후보, 동일 origin JS 번들, 전체 보고서·보안 최종 승인.
+- 중단점: 다음 사용자 ㄱ 전 단위 4 미착수.
 
-## 5. 오류 근거·원인·시도·재시도 금지·대안
-- 단위 2 로컬 순수 Python 테스트 첫 1/4 실패는 깊이 5 경계 테스트가 원시 string을 truncation으로 잘못 기대한 테스트 명세 문제. 객체 중첩을 6단계로 고친 뒤 4/4 PASS. 실측 CI Windows 34/34 및 Chromium 3/3 PASS.
-- 이전 컨테이너의 시스템 Chromium은 net::ERR_BLOCKED_BY_ADMINISTRATOR로 localhost 접근 실패. 동일 환경 우회 금지. 독립 GitHub Actions 실제 Chromium fixture로 대체해 성공.
-- Playwright 응답 API는 gzip/deflate decoding 시 순간 메모리 사용의 완전한 상한을 보장하지 못함. 크기 미지정/큰 응답은 아예 본문 조회하지 않지만, 길이 헤더와 실제 디코딩 메모리가 다를 수 있어 향후 고위험 환경에는 추가 격리 필요. 서버용 SSRF 방어 프록시는 구현 안 됨.
+## ⑤ 오류 근거·원인·시도·재시도 금지·대안
+- 초기 브라우저 1 FAIL은 스키마 범위 라벨 변경에 비해 기존 assertion이 갱신되지 않은 회귀 검사 문제, 정확한 라벨 갱신으로 해결 후 4/4 PASS. 동일 코드 수정 반복 불필요.
+- 이전 개발 컨테이너의 시스템 Chromium localhost 접근은 net::ERR_BLOCKED_BY_ADMINISTRATOR. 접근 정책 우회하지 말고 GitHub Actions Ubuntu Chromium fixture를 검증 환경으로 이용.
+- 완전한 메모리 상한이 보장되지 않는 Playwright의 JSON body API 한계는 단위 2에서 명시. 연결 이벤트는 프레임 내용을 읽지 않음. 외부에 임의 URL 스캔 서비스를 공개할 때 SSRF 보호 없는 현재 CLI를 그대로 서버에 노출하지 말 것.
 
-## 6. 저장소·브랜치·SHA·주요 경로
-비공개 hibi89/fable5.1_web_catcher / main. 기능 및 테스트 검증 대상 SHA **67a8c4132d115e33c3ad0501b642549122eb2e61**. 선행 커밋 d5e816be412e778983323b5421af4090415ae12c(scanner/network.py), cc0ca9aeea2b222c5dbd301872cda0e4815e975a(integration), 67a8c4132d115e33c3ad0501b642549122eb2e61(unit tests). 핵심 파일 scan.py, scanner/network.py, scanner/runtime_scan.py, scanner/report.py, scanner/sanitize.py, tests/fixture_server.py, tests/test_network.py, tests/browser_runtime_check.py, README.md, requirements.txt.
+## ⑥ 저장소·브랜치·SHA·주요 경로
+비공개 hibi89/fable5.1_web_catcher / main. 검증한 기능 SHA f8a4f5dc50cdb4993b0161abb80193e46d00f534. 신규 수집 코드 커밋 27e3fbda676e8bc748628f23f8de024d8399789f, 통합 커밋 a7abd603e8bb1cf33797ed5e32fae459bcae3273, 회귀 assertion 수정 f8a4f5dc50cdb4993b0161abb80193e46d00f534. scanner/connections.py, scanner/network.py, scanner/runtime_scan.py, scanner/report.py, scan.py, tests/fixture_server.py, tests/test_connections.py, tests/test_network.py, tests/browser_runtime_check.py, README.md.
 
-## 7. Production URL·Vercel 프로젝트·실행 명령·환경
-배포 미적용 (로컬 CLI; Vercel/Production URL 없음). 환경 Python 3.11+, Playwright Chromium. 설치: python -m pip install -r requirements.txt; python -m playwright install chromium. 정적: python scan.py https://example.com --out ./out/static. 런타임: python scan.py https://example.com --runtime --wait 10 --out ./out/runtime. 별도 headed: 위 명령에 --headed. 기본 테스트: python -m pytest -q. Chromium: python -m pytest -q tests/browser_runtime_check.py. GitHub Actions workflow runtime-python311.yml은 자체 코드/fixture/test push 및 수동 dispatch에 반응, contents: read.
+## ⑦ Production URL·Vercel 프로젝트·실행 명령·환경
+배포 미적용(로컬 CLI). Vercel 프로젝트/Production URL 없음. Python 3.11+, pip install -r requirements.txt, python -m playwright install chromium. 기본 정적: python scan.py https://example.com --out ./out/static. 런타임: python scan.py https://example.com --runtime --wait 10 --out ./out/runtime. headed(화면 환경에서만): python scan.py https://example.com --runtime --headed --wait 10 --out ./out/runtime. 테스트: python -m pytest -q 및 python -m pytest -q tests/browser_runtime_check.py. runtime GitHub Actions는 관련 소스·fixture·workflow push 또는 수동 dispatch에서 실행, 토큰 contents: read.
 
-## 8. 원본·백업·인증 관리·수정 금지
-확정 요구는 대화 첨부 fable5.1_step1.txt / fable5.1_step2.txt. GitHub main이 소스·버전 단일 기준, 구버전 commit으로 복구 가능. 로그인·폼 제출·자동 API introspection·비허가 크롤링·WAF 우회 금지. 토큰·.env·HAR·쿠키·인증헤더·원본 응답/요청 본문·브라우저 storage state 저장 금지. tests/test_static.py.bak 무단 삭제 금지.
+## ⑧ 원본 위치·백업·인증 관리·수정 금지
+요구 원본: 현재 대화의 fable5.1_step2.txt, 이전 대화 fable5.1_step1.txt. GitHub main을 단일 소스 기준으로 사용. 기존 안정 버전 SHA 9ef6ae952a5fd4976c627ea62d47f7a73ada4395(단위 2 완료)로 Git history에서 복구 가능하며 force push 금지. 인증 토큰·개인 데이터·쿠키·원본 응답/HAR/storage state GitHub 업로드 금지. tests/test_static.py.bak 보존. 수집 fixture의 비밀 문자열은 테스트 전용이며 출력 파일 비노출 검사 통과.
 
-## 9. 다음 작업 우선순위·절차·완료 기준·승인 사항
-다음 ㄱ: **Step 2 단위 3 WebSocket + SSE 연결의 안전한 메타데이터 수집**. 실제로 열린 ws/wss URL(마스킹), 프레임 수, 시간과 SSE 응답 content-type/시각만 기록하며 프레임 내용·스트림 body/토큰을 저장하지 않는다. EventSource가 끝나지 않는 로컬 fixture에서 종료가 제한 시간 내 이뤄지고 기존 API 수집 회귀 34/3 유지되는지 검증. 런타임 차트 라이브러리·차트↔API 연관·JS 번들은 이후 단위로 미루고, 새 ㄱ 없이 선행 작업하지 않는다.
+## ⑨ 다음 작업 우선순위·절차·완료 기준·승인 사항
+다음 ㄱ의 확정 단위: **Step 2 단위 4 — 실행 중 런타임 기술 흔적과 차트 DOM 후보 수집**. Next.js/Nuxt 및 Chart.js/Highcharts/ECharts/Plotly/ApexCharts/D3의 알려진 전역 속성만 읽기 전용 확인, 실제 차트 인스턴스와 라이브러리 로드 분리. DOM/MutationObserver로 SVG/canvas 차트 후보의 첫 관찰·관련 attribute 업데이트 관찰, canvas만으로 라이브러리 확정하지 않음. 내부 URL 탐색·사이트 데이터 변경·무작위 window 순회 금지. localhost fixture + 단위/Chromium 회귀 통과를 완료 기준으로 한다. 차트↔API 점수화와 번들 문자열 검사는 **다음 단위 이후**, 새 ㄱ 전 미착수.
 
-## 10. 갱신 일시(KST)·확인 시점·검증 범위·문서 기준 커밋
-2026-10-18 18:28 KST 테스트 검증. source/test 커밋 **67a8c4132d115e33c3ad0501b642549122eb2e61**. Windows 34/34 run 39115403591, Chromium 3/3 run 39115403678. 문서 자신의 커밋 SHA는 커밋 후 branch HEAD 재조회로 확정한다. 실사이트/사용자 PC/Step 2 전체 검증 미완료.
+## ⑩ 갱신 일시(KST)·확인 시점·검증 범위·문서 기준 커밋
+2026-10-18 18:43 KST CI 최종 결과 확인. 검증된 기능 SHA f8a4f5dc50cdb4993b0161abb80193e46d00f534, Windows 39116413660 38 PASS, Chromium 39116413676 4 PASS. 프로젝트 문서의 HEAD SHA는 문서 커밋 후 GitHub main 재조회로 확인; 인수인계 작성만으로 전체 Step 2 완료라고 주장하지 않음.

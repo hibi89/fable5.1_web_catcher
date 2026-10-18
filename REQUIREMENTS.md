@@ -22,4 +22,4 @@
 
 원본: 대화 첨부 `fable5.1_step2.txt`. Chromium + Playwright로 실행 관찰, XHR/fetch·WebSocket/SSE 연결의 메타데이터, JSON 구조, 런타임 차트 라이브러리, 차트↔API **연관 후보**, 현재 로드된 동일 origin JS 번들 문자열을 근거로 분석한다. 비밀값·원본 응답·storage state·HAR 저장 금지. 자동 로그인·클릭·폼 제출·우회·무작위 API 탐색 금지. Step 1의 정적 분석은 그대로 유지한다.
 
-Step 2 단위 1은 실행/격리/제한 대기/부분 결과 기반만 구현한다. API·차트 수집/매핑은 미구현 상태로 남기며 전체 Step 2 완료 기준을 충족하지 않는다.
+Step 2 단위 1~3 구현: 격리 브라우저 실행, XHR/fetch 및 제한 JSON 구조, WebSocket·SSE 메타데이터. **런타임 차트 기술·DOM 후보·차트↔API 연관·JS 번들은 미구현**. Step 2 전체 완료 기준은 아직 충족하지 않는다.
