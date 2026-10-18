@@ -1,3 +1,14 @@
+# 2026-10-19 KST — p3 대용량 JSON 부분 필드 힌트 기능 완료 (PR #10)
+
+- **PR #10 main 병합** `07fb7ed6fd0b7fb095eb1710e4432557d5cffae5` (검증 브랜치 SHA `df887d02c6602b3214c3aea9b8a6061e51611da6`). 기존 CDP의 decoded-length와 같은 세션에서 요청 시작 시 스트리밍을 켜서 승인 JSON의 처음 **32KiB까지만** 일시 관찰하고, 실제 전체 디코딩 크기가 **128KiB 초과**인 응답에서 첫 번째 완성된 객체의 **값 없는 필드·자료형 구조**를 별도 `json_prefix_structure`로 보존.
+- `completeness=partial_prefix_only` 및 보고서 '전체 JSON 아님/연관 API 판단 근거 아님' 필수. 원래 `json_structure=null`, 전체 본문 읽기 금지와 상한 유지. 허용 main frame/origin, 인증 경로 제외, 최대20 스트림/32KiB 표본/10개 힌트, CDP 이벤트 자체 브라우저 메모리 제한 아님.
+- 첫 구현의 다중 CDP 세션 충돌 회귀가 실제 Chromium에서 확인되어 **단일 CDP 세션으로 수정한 최종 테스트**를 사용함. Windows [39140626259](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39140626259) **70/70 PASS**. 실제 Chromium [39140626261](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39140626261) **23/23 PASS**, 보조 공개사이트 **4/4 PASS**.
+- **실사이트 유의미한 진전**: 사용자가 제공한 대시보드에서 [39140868626](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39140868626) HTTP200/12.395초/승인 API1·차트3·클릭0. API의 128KiB 초과 상태 `decoded_too_large`는 유지하면서 **부분 구조 검출 0 → 1건** 성공. 필드 이름/원문/스크린샷 로그 미출력. 검증 전용 [PR #11](https://github.com/hibi89/fable5.1_web_catcher/pull/11) closed/unmerged; 연구 [PR #9](https://github.com/hibi89/fable5.1_web_catcher/pull/9) closed/unmerged.
+- **실제 필터 변경→차트 변화→API 계보**는 미확인, 인과 추정 금지. 전체 개발 진행률의 분모가 되는 후속 스텝/최종 출시 기능 목록이 확정되어 있지 않아 임의 % 대신 **부분 구조 확보 0→1**을 정량 진전 지표로 사용.
+- 상세: `docs/STEP3_PARTIAL_LARGE_JSON_PREFIX_2026-10-19.md`. 다음은 사용자 최신 Windows 실조작 1회로 변형 증거 확인 또는 별도 차트 데이터 연관 근거의 엄격한 보완.
+
+---
+
 # 2026-10-19 00:14 KST — p3 압축·무길이 JSON 디코딩 크기 관찰 완료 (PR #7 main)
 
 - **PR #7 병합 성공**: `4fe091451e3278aab8477abb1913144c9b3d00e5`, 기능 검증 SHA `c9e735b0d8ac79fc762f533577e582d8c780c04c`.
