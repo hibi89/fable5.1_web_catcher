@@ -106,7 +106,7 @@ python -m pytest -q
 
 ## Step 2 확장 지점
 
-정적 수집 `scanner/static_scan.py`, 규칙 판정 `scanner/fingerprints.py`, 공통 데이터 `scanner/models.py`, 보고서 `scanner/report.py`가 분리되어 있습니다. 향후 선택적 브라우저 분석 결과도 같은 스키마로 반환할 수 있으나, **현재 Playwright를 이용한 API·WebSocket·SSE 관찰은 구현했고, 차트·JS 번들 분석 및 Record·LLM·웹 UI는 미구현입니다.**
+정적 수집 `scanner/static_scan.py`, 규칙 판정 `scanner/fingerprints.py`, 공통 데이터 `scanner/models.py`, 보고서 `scanner/report.py`가 분리되어 있습니다. 향후 선택적 브라우저 분석 결과도 같은 스키마로 반환할 수 있으나, **현재 API·WebSocket·SSE 및 런타임 차트 DOM 후보 관찰은 구현했고, 차트↔API 연관·JS 번들/Record/LLM/웹 UI는 미구현입니다.**
 
 ## Step 2 — 단위 1: 런타임 브라우저 실행 기반 (부분 구현)
 
@@ -126,7 +126,7 @@ python scan.py https://example.com --runtime --headed --wait 10 --out ./out/runt
 오류가 나면 부분 JSON/보고서를 남기고 종료 코드 2를 반환합니다.
 Step 2 단위 1 당시의 `runtime.scope=navigation_only`는 실행 기반만 구현했다는 표시였습니다. 현재 값은 `network_and_connections_metadata`입니다.
 추가된 `runtime.xhr_fetch_requests_seen`·`runtime.xhr_fetch_responses_seen`는 개수만 기록합니다.
-단위 1 당시 API·차트 분석은 미구현이었으나, 현재는 단위 2~3을 통해 실제 API·JSON 구조와 WS/SSE 연결 메타데이터를 수집합니다. 차트 후보·연결 추정·번들 탐지는 미구현입니다.
+단위 1 당시 API·차트 분석은 미구현이었지만 현재 단위 2~4의 API/WS/SSE/차트 DOM 관찰을 구현했습니다. 연관 점수화와 번들 탐지는 미구현입니다.
 따라서 이번 단위 결과를 Step 2 완료라고 해석하지 마세요.
 
 테스트는 두 종류로 구분합니다.
@@ -140,7 +140,7 @@ python -m pytest -q tests/browser_runtime_check.py
 전용 GitHub Actions `.github/workflows/runtime-python311.yml`에서도 별도로 실행합니다.
 `--headed`는 화면 표시가 가능한 환경에서만 사용하세요.
 Chromium 실행이 실패하면 `python -m playwright install chromium`을 확인하세요.
-SSE/WebSocket/API 관찰은 단위 2~3에서 구현했습니다. 차트 수집 및 서버 측 SSRF 격리는 아직 미구현입니다.
+SSE/WebSocket/API는 단위 2~3, 차트 DOM 후보는 단위 4에서 구현했습니다. SSRF 격리는 아직 미구현입니다.
 
 
 ## Step 2 — 단위 2: 관찰된 XHR/fetch 메타데이터
@@ -165,8 +165,8 @@ JSON 중첩 5단계, 객체 키 24개, 배열 표본 3개로 제한합니다.
 오프라인 단위 테스트: `python -m pytest -q tests/test_network.py`
 (일반 전체: `python -m pytest -q`).
 실제 Chromium fixture: `python -m pytest -q tests/browser_runtime_check.py`.
-`api.candidates`와 `charts`는 아직 비어 있지만 `api.connections`에는 실제 WS/SSE 연결을 기록합니다.
-WebSocket·SSE 연결 메타데이터는 단위 3에서 구현했으며, 차트 라이브러리·차트↔API 연관 후보·JS 번들 분석은 미구현입니다.
+api.candidates와 차트별 data_sources는 비어 있지만 charts와 api.connections에 실제 관찰 근거를 기록합니다.
+WS/SSE 단위 3, 알려진 차트 라이브러리·DOM 후보 단위 4 구현. 차트↔API 연관 점수·JS 번들 분석은 미구현입니다.
 
 ## Step 2 — 단위 3: WebSocket·SSE 연결 관찰
 
@@ -182,7 +182,7 @@ python -m pytest -q tests/test_connections.py
 python -m pytest -q tests/browser_runtime_check.py
 ```
 
-차트 라이브러리·차트와 API 연관 후보·JS 번들 분석은 아직 미구현입니다.
+알려진 차트 라이브러리/DOM 후보는 단위 4에서 구현. 차트↔API 연결 및 번들은 아직 미구현입니다.
 
 ## Step 2 — 단위 4: 런타임 기술·차트 DOM 후보
 
