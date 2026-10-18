@@ -1,3 +1,14 @@
+# 2026-10-18 23:46 KST — p3 실제 대시보드 읽기 전용 Record 검증 1단위 완료
+
+- 사용자 지정 URL `https://daily-dashboard-ldh-1013.clevertide128.chatgpt.site/#v-dash`를 최신 main의 PR #3/#4 기능을 사용하여 GitHub Ubuntu 24.04 headed Chromium/Xvfb에서 **실제 접근**. [Actions run 39137433372](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39137433372) SUCCESS.
+- **12.397초, HTTP 200, 정상 stop_signal 종료, main-frame 문서 1개, XHR/fetch API 1건, SVG 후보 2개, CSS bar 후보 1개, fatal=False**. 0회 사용자 조작, 차트 변화 증거 0건, JSON 구조 수집 0건, chart↔API 후보 0건, 경고 집계 2건.
+- 한계 원인 확인: API 응답이 `compressed_size_unknown`으로 제외됨. Content-Length 없는 압축 JSON은 안전상 PR #3 분석 범위 밖. 강제 본문 읽기/의미 없는 강제 연결 금지.
+- **읽기 전용** 시험이라 차트 변화 증거 0건은 새 기능 미검증이지 실패가 아니다. 사용자 실제 Windows PR #3/#4 적용 후 수동 필터 조작 시험은 미실시.
+- 테스트용 임시 PR [#5](https://github.com/hibi89/fable5.1_web_catcher/pull/5) **병합 없이 closed**, 전용 소스와 임시 workflow는 main 미포함. 전체 result/페이지 텍스트/인증 정보/스크린샷 저장 없이 집계만 GitHub CI 로그에 기록.
+- 상세 `docs/STEP3_LIVE_READONLY_2026-10-18.md`. 다음 작업은 압축·길이 미확인 JSON의 **안전한 분석 방안 검토** 또는 사용자 수동 Windows 최종 검사. 이번 작업에서 본문 구조 분석이나 차트↔API 연결을 완료했다고 주장하지 않음.
+
+---
+
 # 2026-10-18 23:37 KST — PR #4 SVG/CSS 변경 증거 보강 검증 완료 및 main 병합
 
 - **p3 다음 1단위 완료**. [PR #4](https://github.com/hibi89/fable5.1_web_catcher/pull/4) `main` 병합 SHA `67e72529be4d5e6a190d7c63fc0c840878301965`; 브랜치 검증 소스 `30a59be00d473a1040d67aa0d3166f41b70f5e70`.
