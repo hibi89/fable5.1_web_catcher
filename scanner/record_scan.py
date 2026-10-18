@@ -382,8 +382,6 @@ def run_record(url: str, result: dict, *, timeout: float,
                      'frame_id': page_id + '-main', 'document_key': None,
                      'document_time_origin': None, 'last_document_url': None}
             pages[page] = state
-            # Passive per-page CDP lengths, no response data or extra requests.
-            net.decoded_tracker.attach_page(context, page)
             conn.attach_page(page)
             def navigated(frame):
                 nonlocal docs_count
@@ -442,6 +440,9 @@ def run_record(url: str, result: dict, *, timeout: float,
                     pass
             page.on('framenavigated', navigated)
             page.on('domcontentloaded', document_ready)
+            # Never block navigation callbacks while CDP initializes.
+            # Attach before initial page.goto, after registering handlers.
+            net.decoded_tracker.attach_page(context, page)
         context.on('page', on_page)
         page = context.new_page()
         on_page(page)
