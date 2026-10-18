@@ -104,3 +104,22 @@ def test_observed_api_is_excluded_and_repeat_paths_deduped():
 def test_static_result_schema_unchanged():
     r = blank_result("https://example.test")
     assert set(r["api"]) == {"endpoints", "candidates", "connections"}
+
+
+def test_at_most_ten_loaded_js_responses_and_limit_warning():
+    from scanner.bundle_scan import MAX_SCRIPTS
+
+    assert MAX_SCRIPTS == 10
+    r = result()
+    c = BundleCollector(r)
+    for i in range(11):
+        req = Request(f"https://example.test/assets/{i}.js")
+        body = f'const hint="/api/candidate_{i}";'.encode()
+        response = Response(req, body)
+        c.on_response(response)
+        c.on_finished(req)
+    c.finalize("https://example.test/")
+    assert r["runtime"]["bundle_scan"]["scanned_scripts"] == 10
+    assert r["runtime"]["bundle_scan"]["limited"] is True
+    assert len(r["api"]["bundle_candidates"]) == 10
+    assert any("상한" in message for message in r["warnings"])
