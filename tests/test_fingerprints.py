@@ -41,7 +41,7 @@ def test_all_required_technologies_present_in_rules():
     import json
     from scanner.fingerprints import RULES_PATH
     rules = json.loads(RULES_PATH.read_text(encoding="utf8"))["technologies"]
-    assert {tech["name"] for tech in rules} == {
+    assert {tech["name"] for tech in rules} >= {
         "React", "Next.js", "Vue", "Nuxt", "Angular",
         "PHP", "ASP.NET", "Express", "Django", "Laravel", "Java Servlet",
         "Cloudflare", "Vercel", "Netlify", "nginx", "Apache"}
