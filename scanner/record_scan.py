@@ -209,6 +209,9 @@ class ScopedNetworkCollector(NetworkCollector):
                 row['response_body_analysis'] = (
                     'decoded_too_large' if verdict == 'decoded_too_large'
                     else 'compressed_decoded_unavailable')
+                if verdict != 'decoded_too_large':
+                    row['cdp_decoded_diagnostic'] = (
+                        self.decoded_tracker.refusal_reason(request))
                 self._body_queue.pop(request, None)
         super().flush_completed()
         # Do not promote sampled prefix structure into full JSON structure.
@@ -235,6 +238,8 @@ class ScopedNetworkCollector(NetworkCollector):
             if row and row['response_body_analysis'] in (
                     'cdp_decoded_pending', 'cdp_decoded_waiting_finish'):
                 row['response_body_analysis'] = 'compressed_decoded_unavailable'
+                row['cdp_decoded_diagnostic'] = (
+                    self.decoded_tracker.refusal_reason(request))
                 self._body_queue.pop(request, None)
         super().finalize()
         self.decoded_tracker.clear()

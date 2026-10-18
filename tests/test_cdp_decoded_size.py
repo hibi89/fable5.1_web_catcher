@@ -53,3 +53,32 @@ def test_missing_data_or_failed_request_abstains():
     row["failed"] = False
     row["invalid"] = True
     assert tracker.decide(req) == ("invalid_or_missing", None)
+
+
+def test_safe_refusal_reasons_are_only_fixed_enum_categories():
+    page = object()
+    req = Request(page)
+    tracker = DecodedLengthTracker(lambda url: True)
+    assert tracker.refusal_reason(req) == "request_unmatched"
+    row = {"decoded": 0, "over": False, "invalid": False,
+           "events": 0, "done": False, "failed": False}
+    tracker._by_page[page] = {(req.url, req.method): [row]}
+    assert tracker.refusal_reason(req) == "loading_incomplete"
+    row["done"] = True
+    assert tracker.refusal_reason(req) == "no_data_events"
+    row["invalid"] = True
+    assert tracker.refusal_reason(req) == "invalid_data_length"
+    row["invalid"] = False
+    row["failed"] = True
+    assert tracker.refusal_reason(req) == "loading_failed"
+    row["failed"] = False
+    row["over"] = True
+    row["events"] = 1
+    assert tracker.refusal_reason(req) == "exceeds_decoded_cap"
+    row["over"] = False
+    row["decoded"] = 51
+    assert tracker.refusal_reason(req) == "ready"
+    tracker._by_page[page][(req.url, req.method)].append(row.copy())
+    assert tracker.refusal_reason(req) == "request_ambiguous"
+    # The result never exposes private request data.
+    assert "approved.test" not in tracker.refusal_reason(req)

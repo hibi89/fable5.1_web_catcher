@@ -161,6 +161,36 @@ class DecodedLengthTracker:
         except Exception:
             return ('invalid_or_missing', None)
 
+    def refusal_reason(self, request):
+        """Value-free status for a CDP-observation refusal.
+
+        This is metadata only. It never contains request URL, ID, body,
+        headers, origin, private field name, or timing identifier.
+        """
+        try:
+            matches = self._by_page.get(request.frame.page, {}).get(
+                (request.url, request.method), ())
+            if len(matches) == 0:
+                return 'request_unmatched'
+            if len(matches) > 1:
+                return 'request_ambiguous'
+            state = matches[0]
+            if state['failed']:
+                return 'loading_failed'
+            if state['invalid']:
+                return 'invalid_data_length'
+            if not state['done']:
+                return 'loading_incomplete'
+            if state['events'] == 0:
+                return 'no_data_events'
+            if state['over']:
+                return 'exceeds_decoded_cap'
+            if state['decoded'] <= 0:
+                return 'nonpositive_decoded_length'
+            return 'ready'
+        except Exception:
+            return 'diagnostic_unavailable'
+
     def hint_for(self, request):
         """A first-object type sample only; never a complete response schema."""
         try:
