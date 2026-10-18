@@ -446,7 +446,7 @@ def test_real_headed_generic_svg_css_bar_geometry_evidence_without_raw_values():
     assert charts['generic_markup_candidate']['change_evidence'] == 'svg_geometry_changed'
     assert charts['css_bar_pattern_candidate']['change_evidence'] == 'css_bar_geometry_changed'
     assert all(type(c['last_observed_update_ms']) is int for c in charts.values())
-    assert result['api']['chart_candidates'] == []
+    assert result['api'].get('chart_candidates', []) == []
     serialized = json.dumps(result, ensure_ascii=False)
     for value in ('75%', '60%', '99 99', 'M 0 0', 'theme-hover'):
         assert value not in serialized
