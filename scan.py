@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -42,6 +43,11 @@ def scan(url: str, out: Path, timeout: float = 10.0) -> int:
 
 
 def main() -> int:
+    # Redirected Windows streams may not support Korean; print safely, without changing encoding.
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            reconfigure(errors="backslashreplace")
     p = argparse.ArgumentParser(description="공개 URL의 정적 기술 근거 분석 (Step 1)")
     p.add_argument("url", help="HTTP/HTTPS 사이트 URL")
     p.add_argument("--out", type=Path, help="결과 폴더 (기본: out/날짜-시간)")

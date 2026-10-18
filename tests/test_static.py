@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -128,3 +129,16 @@ def test_subprocess_cli(tmp_path):
     assert done.returncode == 0, done.stdout + done.stderr
     assert (tmp_path / "result.json").exists() and (tmp_path / "report.md").exists()
 
+
+def test_subprocess_cli_when_stdout_cannot_encode_korean(tmp_path):
+    # Reproduce Windows redirected stdout with a Western legacy console code page.
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "cp1252:strict"
+    with fixture_server() as url:
+        done = subprocess.run(
+            [sys.executable, str(ROOT / "scan.py"), url + "/next", "--out", str(tmp_path)],
+            cwd=ROOT, env=env, capture_output=True, text=True, encoding="cp1252", timeout=10,
+        )
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert (tmp_path / "result.json").exists()
+    assert (tmp_path / "report.md").exists()
