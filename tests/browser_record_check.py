@@ -25,6 +25,26 @@ from tests.fixture_server import FixtureHandler
 class RecordHandler(FixtureHandler):
     def do_GET(self):
         path = self.path.split('?', 1)[0]
+        if path in ('/cross-api-chunked', '/cross-api-chunked-large'):
+            # Real HTTP chunked JSON: deliberately omit Content-Length.
+            note = ('SENSITIVE_UNSAVED' if path == '/cross-api-chunked'
+                    else 'S' * 140000)
+            obj = json.dumps({'points': [{'date': 'PRIVATE_DATE', 'value': 9,
+                                           'note': note}]}).encode()
+            # Only this particular response uses HTTP/1.1 chunk framing.
+            # The rest of the fixture keeps its original HTTP/1.0 lifecycle.
+            self.protocol_version = 'HTTP/1.1'
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Transfer-Encoding', 'chunked')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            for start in range(0, len(obj), 4096):
+                piece = obj[start:start+4096]
+                self.wfile.write(f'{len(piece):X}\r\n'.encode() + piece + b'\r\n')
+            self.wfile.write(b'0\r\n\r\n')
+            self.wfile.flush()
+            return
         if path == '/cross-api':
             obj = json.dumps({'points': [{'date': 'EXTERNAL_DATE_SECRET',
                                            'value': 12, 'password': 'EXTERNAL_BODY_SECRET'}]}).encode()
@@ -327,3 +347,37 @@ def test_real_headed_external_json_requires_explicit_allow_origin():
         assert records[1]['json_structure'] == {
             'points': [{'date': 'string', 'value': 'number',
                         '[REDACTED_KEY]': 'string'}]}
+
+
+def test_real_headed_headerless_chunked_json_authorization_and_size_bound():
+    with serve_record() as dashboard, serve_record() as external:
+        for path, permit, expected in [
+            ('/cross-api-chunked', False, 'scope_or_auth_body_excluded'),
+            ('/cross-api-chunked', True, 'structure_only'),
+            ('/cross-api-chunked-large', True, 'too_large'),
+        ]:
+            output = blank_result(dashboard)
+            fired = set()
+            def hook(context, pages, elapsed, stop):
+                if not fired:
+                    fired.add(True)
+                    pg = context.pages[0]
+                    pg.evaluate("""url => fetch(url).catch(() => {})""",
+                                external + path + '?password=QUERY_SECRET')
+                    pg.wait_for_timeout(400)
+                    stop.set()
+            assert run_record(dashboard + '/record', output, timeout=8,
+                              max_duration=15, allow_origin=[external] if permit else [],
+                              stop_event=threading.Event(), test_hook=hook) is False
+            matches = [row for row in output['api']['endpoints'] if row['url'].endswith(path)]
+            assert len(matches) == 1, output['api']['endpoints']
+            row = matches[0]
+            assert row['response_body_analysis'] == expected, row
+            if expected == 'structure_only':
+                assert row['json_structure'] == {
+                    'points': [{'date': 'string', 'value': 'number', 'note': 'string'}]}
+            else:
+                assert row['json_structure'] is None
+            assert 'QUERY_SECRET' not in json.dumps(output)
+            assert 'SENSITIVE_UNSAVED' not in json.dumps(output)
+            assert 'PRIVATE_DATE' not in json.dumps(output)
