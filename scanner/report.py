@@ -51,11 +51,11 @@ def to_markdown(result: dict) -> str:
         lines[0] = "# Fable 5.1 Web Catcher — 런타임 브라우저 관찰 보고서"
         for i, line in enumerate(lines):
             if line.startswith("- 분석 모드:"):
-                lines[i] = "- 분석 모드: `runtime` — Chromium DOMContentLoaded 및 실제 XHR/fetch 요청·응답 구조 관찰"
+                lines[i] = "- 분석 모드: `runtime` — Chromium 실제 XHR/fetch·WebSocket·SSE 관찰"
             elif line.startswith("- 정적 GET 1페이지"):
                 lines[i] = "- 격리 브라우저로 페이지만 열고 제한적으로 스크롤했습니다. 로그인·클릭·폼 제출은 하지 않았습니다."
             elif line.startswith("- Step 1의 API"):
-                lines[i] = "- Step 2 단위 2에서 XHR/fetch API 정보만 수집하며 차트 연관 분석은 아직 비활성화되어 있습니다."
+                lines[i] = "- Step 2 단위 3에서 XHR/fetch 및 WebSocket·SSE 연결을 수집하며 차트 연관 분석은 아직 비활성화되어 있습니다."
         runtime = result.get("runtime", {})
         index = lines.index("## 한계 및 주의")
         lines[index:index] = [
@@ -65,8 +65,30 @@ def to_markdown(result: dict) -> str:
             f"- 스크롤: {runtime.get('scroll_steps', 0)}회",
             f"- XHR/fetch 요청 관찰 수: {runtime.get('xhr_fetch_requests_seen', 0)}",
             f"- XHR/fetch 응답 관찰 수: {runtime.get('xhr_fetch_responses_seen', 0)}",
-            "- 차트·WebSocket·SSE·번들 문자열 분석은 아직 구현하지 않았습니다.", "",
+            "- 차트 라이브러리·차트 연관 및 번들 문자열 분석은 아직 구현하지 않았습니다.", "",
         ]
+        connections = result["api"]["connections"]
+        connection_lines = ["## 실제 관찰 WebSocket / SSE 연결", "",
+                            f"- 관찰 연결 수: {len(connections)}건",
+                            "- 프레임 원문과 SSE 스트림 본문은 읽거나 저장하지 않습니다.", ""]
+        for item in connections[:40]:
+            if item["kind"] == "websocket":
+                connection_lines.append(
+                    f"- {item['id']} WebSocket {item['url']}"
+                    f" · 관찰 UTC ms: {item['observed_at_ms']}"
+                    f" · 보낸 프레임 {item['frames_sent']} / 받은 프레임 {item['frames_received']}"
+                )
+            elif item["kind"] == "sse":
+                connection_lines.append(
+                    f"- {item['id']} SSE {item['url']}"
+                    f" · HTTP {item['status']} · {item['content_type']}"
+                    f" · 관찰 UTC ms: {item['observed_at_ms']}"
+                )
+        if len(connections) > 40:
+            connection_lines.append(f"- 보고서 표시 생략: {len(connections)-40}건")
+        connection_lines.append("")
+        index = lines.index("## 한계 및 주의")
+        lines[index:index] = connection_lines
         endpoints = result["api"]["endpoints"]
         entry_lines = ["## 실제 관찰된 XHR/fetch API (추정 경로 탐색 아님)", "",
                        f"- 관찰된 요청 수: {len(endpoints)}건",

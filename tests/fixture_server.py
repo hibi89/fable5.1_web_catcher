@@ -1,6 +1,8 @@
 """Local fake web service for offline tests: NOT a real public website."""
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
 import time
 from contextlib import contextmanager
@@ -21,6 +23,47 @@ class FixtureHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _websocket_fixture(self):
+        key = self.headers.get("Sec-WebSocket-Key", "")
+        if not key:
+            self.send_error(400)
+            return
+        accept = base64.b64encode(hashlib.sha1(
+            (key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").encode()
+        ).digest()).decode()
+        self.send_response(101)
+        self.send_header("Upgrade", "websocket")
+        self.send_header("Connection", "Upgrade")
+        self.send_header("Sec-WebSocket-Accept", accept)
+        self.end_headers()
+        try:
+            for message in (b"FRAME_ONE_PRIVATE", b"FRAME_TWO_PRIVATE"):
+                self.wfile.write(bytes((0x81, len(message))) + message)
+                self.wfile.flush()
+                time.sleep(0.08)
+            # No frame inspection. Browser closes socket with isolated context.
+            time.sleep(0.35)
+        except (BrokenPipeError, ConnectionResetError, OSError):
+            pass
+        finally:
+            self.close_connection = True
+
+    def _sse_fixture(self):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Connection", "keep-alive")
+        self.end_headers()
+        try:
+            self.wfile.write(b"data: SSE_CONTENT_PRIVATE\n\n")
+            self.wfile.flush()
+            # Stream deliberately remains open beyond the scan wait.
+            time.sleep(2.0)
+        except (BrokenPipeError, ConnectionResetError, OSError):
+            pass
+        finally:
+            self.close_connection = True
+
     def do_POST(self):
         path = self.path.split("?", 1)[0]
         if path == "/graphql":
@@ -32,6 +75,23 @@ class FixtureHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = self.path.split("?", 1)[0]
+        if path == "/ws":
+            self._websocket_fixture()
+            return
+        if path == "/stream":
+            self._sse_fixture()
+            return
+        if path == "/runtime-connections":
+            page = """<!doctype html><html><body><script>
+            setTimeout(() => {
+              const socket = new WebSocket('ws://127.0.0.1:__PORT__/ws?access_token=WS_URL_PRIVATE');
+              socket.addEventListener('open', () => socket.send('WS_SENT_PRIVATE'));
+              const events = new EventSource('/stream?api_key=SSE_URL_PRIVATE');
+              events.addEventListener('message', () => {});
+            }, 30);
+            </script></body></html>""".replace("__PORT__", str(self.server.server_port))
+            self._dynamic_response(page.encode(), "text/html; charset=utf-8")
+            return
         if path == "/runtime-network":
             page = """<!doctype html><html><body><div>API test fixture</div><script>
             setTimeout(() => {

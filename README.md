@@ -166,4 +166,20 @@ JSON 중첩 5단계, 객체 키 24개, 배열 표본 3개로 제한합니다.
 (일반 전체: `python -m pytest -q`).
 실제 Chromium fixture: `python -m pytest -q tests/browser_runtime_check.py`.
 `api.candidates`, `api.connections`, `charts`는 아직 비어 있습니다.
-WebSocket·SSE, 차트 라이브러리, 차트↔API 연관 후보, JS 번들 분석은 미구현입니다.
+WebSocket·SSE 연결 메타데이터는 단위 3에서 구현했으며, 차트 라이브러리·차트↔API 연관 후보·JS 번들 분석은 미구현입니다.
+
+## Step 2 — 단위 3: WebSocket·SSE 연결 관찰
+
+런타임 실행에서 실제 WebSocket과 text/event-stream SSE 응답을 api.connections에 기록합니다.
+WebSocket의 마스킹 URL·관찰 시각·송수신 프레임 개수, SSE의 마스킹 URL·상태·MIME·시각을 저장합니다.
+프레임 원문, SSE 데이터, 인증 헤더나 쿠키는 읽거나 저장하지 않습니다.
+연결 60건, 프레임 카운트 방향별 1,000,000 상한이 있습니다.
+SSE 요청 종료를 기다리지 않으며 networkidle도 사용하지 않습니다.
+WebSocket/SSE는 로컬 fixture 및 실제 Chromium 테스트로 검증합니다.
+
+```bash
+python -m pytest -q tests/test_connections.py
+python -m pytest -q tests/browser_runtime_check.py
+```
+
+차트 라이브러리·차트와 API 연관 후보·JS 번들 분석은 아직 미구현입니다.

@@ -1,6 +1,6 @@
 """Isolated Chromium runtime navigation scaffold (Step 2, unit 1).
 
-Observed XHR/fetch metadata and bounded value-free JSON structures are enabled.
+Observed XHR/fetch and WebSocket/SSE connection metadata are enabled.
 Chart library detection and chart mapping remain out of scope.
 """
 from __future__ import annotations
@@ -9,6 +9,7 @@ from urllib.parse import urlsplit
 
 from .sanitize import safe_url
 from .network import NetworkCollector
+from .connections import ConnectionCollector
 
 # Installed by Playwright BEFORE navigation, to observe page timings only.
 # No site state, forms, cookies, or storage are changed by this script.
@@ -63,11 +64,11 @@ def scan_runtime_page(url: str, result: dict, *, timeout: float, wait: float, he
         'domcontentloaded_observed': False,
         'wait_seconds': wait,
         'scroll_steps': 0,
-        'scope': 'network_metadata_only',
+        'scope': 'network_and_connections_metadata',
         'xhr_fetch_requests_seen': 0,
         'xhr_fetch_responses_seen': 0,
     }
-    warnings.append('Step 2 부분 구현: XHR/fetch 메타데이터만 수집. WebSocket·SSE·차트·번들은 아직 미구현입니다.')
+    warnings.append('Step 2 부분 구현: XHR/fetch·WebSocket·SSE 메타데이터 수집. 차트·번들은 아직 미구현입니다.')
     try:
         from playwright.sync_api import Error as BrowserError
         from playwright.sync_api import TimeoutError as BrowserTimeoutError
@@ -90,7 +91,9 @@ def scan_runtime_page(url: str, result: dict, *, timeout: float, wait: float, he
                 # Register before any navigation, including redirect and early events.
                 page.add_init_script(_INIT_OBSERVER)
                 network = NetworkCollector(result)
+                connections = ConnectionCollector(result)
                 network.attach(page)
+                connections.attach(page)
                 try:
                     response = page.goto(url, wait_until='domcontentloaded', timeout=int(timeout * 1000))
                     result['runtime']['domcontentloaded_observed'] = True
@@ -122,6 +125,10 @@ def scan_runtime_page(url: str, result: dict, *, timeout: float, wait: float, he
                         )
                     except Exception:
                         warnings.append('네트워크 응답 구조 분석 오류: 기록된 endpoint만 보존')
+                    try:
+                        connections.finalize()
+                    except Exception:
+                        warnings.append('연결 관찰 마무리 오류: 기록된 연결만 보존')
             except BrowserError:
                 warnings.append('Chromium 실행 실패: python -m playwright install chromium 명령으로 설치를 확인하세요.')
                 fatal = True
