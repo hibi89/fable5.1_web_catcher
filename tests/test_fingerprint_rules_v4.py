@@ -3,7 +3,7 @@ import json
 from scanner.fingerprints import RULES_PATH, _observation_matches
 
 POSITIVE = {
-    "react-root": "react_root", "react-script": "/js/react.production.min.js",
+    "react-root": "react_root", "react-script": "/js/react.production.js",
     "next-html": "next_data", "next-assets": "/_next/static/chunks/main.js",
     "next-root": "next_root", "vue-mount": "vue_mount",
     "vue-assets": "/js/vue.global.prod.js", "nuxt-html": "nuxt_payload",
