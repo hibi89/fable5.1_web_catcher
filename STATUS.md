@@ -1,3 +1,16 @@
+# 2026-10-19 KST — Step 4 선택적 OpenAI 보고서 Mock 인수 완료
+
+- **PR #12 main 병합 성공**: `0fb2effcf1be3504d323231120cce70d23491d82` (테스트 기능 SHA `3061db1b8fc7706a715975b4fe7e077eb05e3ff9`).
+- 사용자 Step 4 원본 지침서 기준 **10/10 항목 Mock·로컬 자동검증 충족**. 실제 OpenAI 유료 API **미호출(0회)**, 프롬프트 주입 내성/모델 품질의 라이브 검증은 아직 미수행.
+- 명시적 `--llm`만 외부 API 호출, `--from-result ... --llm-dry-run`은 전송 예정 정제 payload 확인 및 외부 LLM 네트워크 호출 0회. `OPENAI_API_KEY`/모델 없으면 안내만 하고 기존 스캔 보존. `--runtime`/`--record`/정적 CLI 호환.
+- official Python SDK Responses API `json_schema` structured output을 로컬 엄격 검증, confidence는 기존 규칙 엔진, backend finding/evidence 및 차트↔API 원래 후보 ID만 허용, 7개 한국어 섹션 로컬 렌더링. 원본 결과 덮어쓰기 금지.
+- 대외 데이터: 내부 호스트 `origin_#` 별칭, 민감 경로/JSON key 일반화, 전체 result/raw body/쿠키/인증값/폼·원문 제외, 근거 우선 정렬·중복 제거·상한/생략 사유 기록. 완벽한 개인정보 익명화 보장 없음 → 사용 전 dry-run 검토 권장.
+- 기존 **16개 기술/30신호 → 35개 기술/총 50개 유효 구분 규칙 신호** (고유 ID/출처/한계/검증 memo 및 **50개 synthetic 양성·음성 fixture**). 실제 사이트별 탐지율을 입증하는 수치는 아님.
+- **최종 GitHub Actions Windows 91/91 PASS** [39142853498](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39142853498), **실제 Chromium 23/23 PASS**, 선택 공개사이트 **4/4 PASS** [39142853476](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39142853476). Step 4 API 실패 처리 등은 *mock SDK/fixture* 테스트임.
+- 상세 근거 `docs/STEP4_MOCK_ACCEPTANCE_2026-10-19.md`. 남은 검증: 본인 API 키/실제 모델 선택 후 명시적 opt-in smoke(비용 발생 가능) 및 사용자 Windows Step 3 수동 필터→차트 연관 근거 1회.
+
+---
+
 # 2026-10-19 KST — p3 대용량 JSON 부분 필드 힌트 기능 완료 (PR #10)
 
 - **PR #10 main 병합** `07fb7ed6fd0b7fb095eb1710e4432557d5cffae5` (검증 브랜치 SHA `df887d02c6602b3214c3aea9b8a6061e51611da6`). 기존 CDP의 decoded-length와 같은 세션에서 요청 시작 시 스트리밍을 켜서 승인 JSON의 처음 **32KiB까지만** 일시 관찰하고, 실제 전체 디코딩 크기가 **128KiB 초과**인 응답에서 첫 번째 완성된 객체의 **값 없는 필드·자료형 구조**를 별도 `json_prefix_structure`로 보존.
