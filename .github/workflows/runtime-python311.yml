@@ -10,6 +10,9 @@ on:
       - 'scanner/connections.py'
       - 'scanner/runtime_detect.py'
       - 'scanner/chart_mapping.py'
+      - 'scanner/bundle_scan.py'
+      - 'tests/test_bundle_scan.py'
+      - 'tests/browser_bundle_check.py'
       - 'tests/test_chart_mapping.py'
       - 'tests/test_runtime_detect.py'
       - 'tests/test_connections.py'
@@ -38,4 +41,4 @@ jobs:
       - name: Install Chromium and OS dependencies
         run: python -m playwright install --with-deps chromium
       - name: Run real-browser local fixture test
-        run: python -m pytest -q tests/browser_runtime_check.py tests/browser_mapping_check.py
+        run: python -m pytest -q tests/browser_runtime_check.py tests/browser_mapping_check.py tests/browser_bundle_check.py
