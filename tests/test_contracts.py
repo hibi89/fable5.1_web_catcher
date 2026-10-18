@@ -91,7 +91,7 @@ def test_unsafe_json_key_and_hostname_never_exported(tmp_path):
     schema_files=list((out/"schemas").glob("*.schema.json"))
     assert len(schema_files)==1
     import jsonschema
-    jsonschema.Draft202012Validator.check_schema(json.loads(schema_files[0].read_text()))
+    jsonschema.Draft202012Validator.check_schema(json.loads(schema_files[0].read_text(encoding="utf-8")))
     everything="\n".join(f.read_text(encoding="utf-8") for f in out.rglob("*") if f.is_file())
     for secret in ("internal.private.example","joe@example.com","BAD_QUERY_VALUE","?token"):
         assert secret not in everything
