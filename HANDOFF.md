@@ -1,3 +1,15 @@
+# 2026-10-19 KST — Fable 5.1 Web Catcher Step 3 대용량 JSON 부분 구조 인수
+
+- **PR #10 https://github.com/hibi89/fable5.1_web_catcher/pull/10 병합 완료**, source `df887d02c6602b3214c3aea9b8a6061e51611da6`, merge `07fb7ed6fd0b7fb095eb1710e4432557d5cffae5`.
+- 새 `scanner/json_prefix_hints.py`: 32KiB 제한 JSON prefix의 처음 완성된 객체를 찾아 기존 민감키 마스킹 및 `_json_shape`로 필드/타입만 요약. 새 `json_prefix_structure` (completeness `partial_prefix_only`)는 완전한 API `json_structure`와 **분리**; API→차트 매핑 판정에 투입하지 않음.
+- `scanner/cdp_decoded_size.py` 단일 CDP 세션을 이용, 요청 시작 시 `Network.streamResourceContent` 활성화 후 최초 32KiB까지만 임시 샘플, 20 스트림/10 힌트 상한. `scanner/record_scan.py`에서 승인 exact-origin/main-frame, HTTP200 JSON & 기존 `decoded_too_large`에만 별도 샘플 부착. `scanner/report.py`에 '부분 샘플/전체 아님' 표시. 불확실/중복/미완성 이벤트는 힌트 없음. 인증값/본문/화면 원문 영구 저장 없음.
+- **Windows fixture 70/70 PASS** [39140626259](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39140626259), **실제 headed Chromium 23/23 PASS** 및 공개 홈페이지 4/4 [39140626261](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39140626261). 초기 두 CDP 세션 충돌은 실제 회귀로 확인, 수정해 최종 PASS.
+- **실사이트 read-only 12.395초** [39140868626](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39140868626): HTTP200/승인 API1·차트3, 128KiB 초과 본문은 읽지 않은 채 **`partial_prefix_hint_count=1`** (기존0). `json_shape_count=0`, 클릭0, `chart_api_candidate_count=0`. 부분 힌트 원본·키 목록은 GitHub 로그에 출력 안 함. 실사이트 전용 [PR #11](https://github.com/hibi89/fable5.1_web_catcher/pull/11) 및 실험 [PR #9](https://github.com/hibi89/fable5.1_web_catcher/pull/9) closed unmerged.
+- 문서 `docs/STEP3_PARTIAL_LARGE_JSON_PREFIX_2026-10-19.md`. **원래 Step 1/2/3 CLI 자동 인수 기준은 완료**, 사용자가 제공한 최종 전체 제품 스코프(후속 단계/배포 범위)는 확정된 문서가 없어 *전체 %를 임의 산정하지 않는다*. 그러나 실제 사이트 부분 구조 0→1은 유의미한 진도 상승.
+- 후속 범위: 실제 사용자 Windows 최신 main 수동 필터 조작 후 `change_evidence`/차트↔API 후보 검사, iframe 미지원·서버 SSRF 격리·브라우저 내부 압축 메모리 하드제한 없음 유지. 추가 로그인/외부 endpoint 자동 탐색 금지.
+
+---
+
 # 2026-10-19 00:14 KST — p3 무길이 압축 JSON CDP decoded-length 단계 완료 및 실사이트 검증
 
 - **PR #7** https://github.com/hibi89/fable5.1_web_catcher/pull/7 main merge `4fe091451e3278aab8477abb1913144c9b3d00e5`, tested source `c9e735b0d8ac79fc762f533577e582d8c780c04c`.
