@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from urllib.parse import urlsplit, urlunsplit
 
 from .bundle_scan import BundleCollector, _origin
+from .cdp_decoded_size import DecodedLengthTracker
 from .chart_mapping import map_chart_api_candidates
 from .connections import ConnectionCollector
 from .network import NetworkCollector
@@ -131,6 +132,9 @@ class ScopedNetworkCollector(NetworkCollector):
         self.pages = pages
         self.event_count = 0
         self.omitted = 0
+        self.decoded_tracker = DecodedLengthTracker(
+            lambda url: origin_string(url) in self.origins
+            and not _AUTH_PATH.search(urlsplit(url).path))
 
     def on_request(self, request):
         if request.resource_type not in ('xhr', 'fetch'):
@@ -173,9 +177,50 @@ class ScopedNetworkCollector(NetworkCollector):
             self._body_queue.pop(response.request, None)
             row['json_structure'] = None
             row['response_body_analysis'] = 'scope_or_auth_body_excluded'
+            return
+        # An unknown wire length plus gzip/br does not bound decoded memory.
+        # Wait for passive CDP decoded-byte metadata; never read blindly.
+        if row['response_body_analysis'] == 'waiting_for_finished_size_check':
+            encoding = response.headers.get('content-encoding', '').strip().lower()
+            if encoding and encoding != 'identity':
+                row['response_body_analysis'] = 'cdp_decoded_waiting_finish'
+
+    def on_finished(self, request):
+        row = self._request_rows.get(request)
+        if row and row['response_body_analysis'] == 'cdp_decoded_waiting_finish':
+            row['response_body_analysis'] = 'cdp_decoded_pending'
+            return
+        super().on_finished(request)
+
+    def flush_completed(self):
+        for request, response in list(self._body_queue.items()):
+            row = self._request_rows.get(request)
+            if row is None or row['response_body_analysis'] != 'cdp_decoded_pending':
+                continue
+            verdict, expected = self.decoded_tracker.decide(request)
+            if verdict == 'pending':
+                continue
+            if verdict == 'ready':
+                self._expected_decoded_bytes[request] = expected
+                row['response_body_analysis'] = 'ready'
+            else:
+                row['response_body_analysis'] = (
+                    'decoded_too_large' if verdict == 'decoded_too_large'
+                    else 'compressed_decoded_unavailable')
+                self._body_queue.pop(request, None)
+        super().flush_completed()
 
     def finalize(self):
+        self.flush_completed()
+        # Requests still lacking completion-length evidence stay unread.
+        for request, response in list(self._body_queue.items()):
+            row = self._request_rows.get(request)
+            if row and row['response_body_analysis'] in (
+                    'cdp_decoded_pending', 'cdp_decoded_waiting_finish'):
+                row['response_body_analysis'] = 'compressed_decoded_unavailable'
+                self._body_queue.pop(request, None)
         super().finalize()
+        self.decoded_tracker.clear()
         if self.omitted:
             self.result['warnings'].append(
                 f'Record 요청 상세 미수집 {self.omitted}건(범위/프레임/상한, 일부 이벤트 제외)'
@@ -337,6 +382,8 @@ def run_record(url: str, result: dict, *, timeout: float,
                      'frame_id': page_id + '-main', 'document_key': None,
                      'document_time_origin': None, 'last_document_url': None}
             pages[page] = state
+            # Passive per-page CDP lengths, no response data or extra requests.
+            net.decoded_tracker.attach_page(context, page)
             conn.attach_page(page)
             def navigated(frame):
                 nonlocal docs_count
