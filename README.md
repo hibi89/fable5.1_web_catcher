@@ -281,3 +281,9 @@ python scan.py "https://daily-dashboard-ldh-1013.clevertide128.chatgpt.site/#v-d
 ~~~
 
 브라우저에서 직접 탭·필터를 변경한 뒤 터미널 Enter를 누르세요. 브라우저 종료 역시 정상 종료 조건입니다. 사용자 로컬 폴더가 Git 복제가 아닌 다운로드 ZIP이면 git pull은 실패하므로, 먼저 .git 여부를 확인하고 GitHub 최신 main ZIP을 별도 폴더에 압축 해제하세요. 리포트에 0건 차트↔API 후보가 나와도 곧바로 오류는 아닙니다. CSS bar/일반 SVG와 해당 JSON 사이의 자료 흐름은 확인된 근거 없이 연결하지 않습니다.
+
+## Step 3 Record: 응답 크기 헤더가 없는 JSON 분석 (2026-10-18)
+
+승인한 정확한 API origin에서 수집되는 JSON 응답이 `Content-Length`를 제공하지 않아 `size_unknown`으로 제외되던 경우, **Record 모드에 한해** 요청이 완료된 후 브라우저가 측정한 응답 본문 전송 크기를 확인합니다. 비압축 응답이고 크기가 128KiB 이하라면 JSON 자료형 구조만 분석하며, 값이나 원본 응답은 저장하지 않습니다. 크기 미확인·초과 및 미확인 길이의 압축 응답은 차단합니다. 본문을 읽은 뒤 실제 크기도 재검사합니다.
+
+이 정책은 `--record`에서만 적용되고 기존 `--runtime`의 `size_unknown` 정책은 유지됩니다. 외부 API는 권한 있는 origin을 `--allow-origin`으로 명시해야 합니다. 실제 실사이트 분석 성공과 차트↔API 연결은 별도 확인이 필요합니다. Playwright 본문 디코딩 과정의 메모리를 절대 상한으로 제한한 기능은 아닙니다. 변경/보안/테스트 근거: `docs/STEP3_HEADERLESS_JSON_BOUND_2026-10-18.md`.
