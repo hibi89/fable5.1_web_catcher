@@ -1,0 +1,83 @@
+name: Public website Step 1 smoke (one-time)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/public-website-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-smoke:
+    name: Real public HTML scan and schema integrity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Python 3.11
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - name: Create clean venv and install dependencies
+        run: |
+          python -m venv .venv-smoke
+          .venv-smoke/bin/python -m pip install --disable-pip-version-check -r requirements.txt
+      - name: Read-only single public page scan
+        run: .venv-smoke/bin/python scan.py https://www.python.org/ --out out/public-python-org --timeout 20
+      - name: Validate generated artifacts and references
+        shell: bash
+        run: |
+          .venv-smoke/bin/python - <<'PY'
+          import json
+          from pathlib import Path
+          from urllib.parse import urlsplit
+          root = Path('out/public-python-org')
+          json_path, md_path = root / 'result.json', root / 'report.md'
+          assert json_path.is_file() and md_path.is_file(), 'Both report files must exist'
+          obj = json.loads(json_path.read_text(encoding='utf-8'))
+          md = md_path.read_text(encoding='utf-8')
+          required = {'schema_version','target','scanned_at','scan_mode','frontend','backend_inferred','infra','api','charts','evidence','warnings'}
+          assert required <= obj.keys(), 'Missing result schema keys'
+          assert obj['scan_mode'] == 'static'
+          assert obj['api'] == {'endpoints': [], 'candidates': [], 'connections': []}
+          assert obj['charts'] == []
+          assert obj['target']['status_code'] == 200, 'Expected successful public HTML response'
+          assert urlsplit(obj['target']['final_url']).hostname == 'www.python.org'
+          assert '정적 분석 보고서' in md and '## 경고' in md
+          assert len(md) > 200 and json_path.stat().st_size > 200
+          evidence_ids = {e['id'] for e in obj['evidence']}
+          assert len(evidence_ids) == len(obj['evidence']), 'Duplicate evidence ids'
+          for cat in ('frontend', 'backend_inferred', 'infra'):
+              assert isinstance(obj[cat], list) and obj[cat], 'Missing category: '+cat
+              for item in obj[cat]:
+                  assert set(item) == {'name','version','confidence','evidence_ids'}
+                  assert 0 <= item['confidence'] <= 1
+                  assert set(item['evidence_ids']) <= evidence_ids
+          prohibited = ('authorization', 'set-cookie', 'cookie_value', 'raw_html')
+          assert not any(k in obj['target'] for k in prohibited)
+          assert isinstance(obj['warnings'], list)
+          print('PUBLIC_SMOKE_PASS ' + json.dumps({
+              'site': 'https://www.python.org/',
+              'status': obj['target']['status_code'],
+              'schema_version': obj['schema_version'],
+              'redirects': len(obj['target']['redirect_chain']),
+              'evidence_count': len(obj['evidence']),
+              'warnings_count': len(obj['warnings']),
+              'results': {key: [x['name'] for x in obj[key]] for key in ('frontend','backend_inferred','infra')},
+              'json_bytes': json_path.stat().st_size,
+              'markdown_bytes': md_path.stat().st_size
+          }, ensure_ascii=False))
+          PY
+      - name: Save public-site reports as CI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-org-static-scan
+          path: |
+            out/public-python-org/result.json
+            out/public-python-org/report.md
+          if-no-files-found: error
+          retention-days: 7
