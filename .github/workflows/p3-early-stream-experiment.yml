@@ -1,0 +1,20 @@
+name: CDP early streaming localhost experiment
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - run: python -m pip install -r requirements.txt
+      - run: python -m playwright install --with-deps chromium
+      - run: xvfb-run -a python -u -m tests.p3_cdp_early_prefix_experiment
