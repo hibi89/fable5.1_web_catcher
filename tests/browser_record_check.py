@@ -25,6 +25,16 @@ from tests.fixture_server import FixtureHandler
 class RecordHandler(FixtureHandler):
     def do_GET(self):
         path = self.path.split('?', 1)[0]
+        if path == '/cross-api':
+            obj = json.dumps({'points': [{'date': 'EXTERNAL_DATE_SECRET',
+                                           'value': 12, 'password': 'EXTERNAL_BODY_SECRET'}]}).encode()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Length', str(len(obj)))
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(obj)
+            return
         if path == '/record-spa':
             body = b"""<!doctype html><html><body>
             <button id='change'>Change</button>
@@ -286,3 +296,34 @@ def test_real_headed_closed_browser_keeps_redacted_final_url(tmp_path):
     output = json.dumps(data)
     assert 'LAST_SECRET' not in output
     assert 'ORIGINAL_SECRET' not in output
+
+
+def test_real_headed_external_json_requires_explicit_allow_origin():
+    with serve_record() as dashboard, serve_record() as external:
+        records = []
+        for allow in ([], [external]):
+            result = blank_result(dashboard)
+            fired = set()
+            def hook(context, pages, elapsed, stop):
+                if not fired:
+                    fired.add(True)
+                    pg = context.pages[0]
+                    pg.evaluate("""base => fetch(base + '/cross-api?token=EXTERNAL_QUERY_SECRET').catch(() => {})""", external)
+                    pg.wait_for_timeout(300)
+                    stop.set()
+            assert run_record(dashboard+'/record', result, timeout=8, max_duration=12,
+                              allow_origin=allow, stop_event=threading.Event(),
+                              test_hook=hook) is False
+            endpoint = next(row for row in result['api']['endpoints']
+                            if '/cross-api' in row['url'])
+            assert endpoint['url'] == external + '/cross-api'
+            records.append(endpoint)
+            serialized = json.dumps(result, ensure_ascii=False)
+            for secret in ('EXTERNAL_DATE_SECRET', 'EXTERNAL_BODY_SECRET', 'EXTERNAL_QUERY_SECRET'):
+                assert secret not in serialized
+        assert records[0]['response_body_analysis'] == 'scope_or_auth_body_excluded'
+        assert records[0]['json_structure'] is None
+        assert records[1]['response_body_analysis'] == 'structure_only'
+        assert records[1]['json_structure'] == {
+            'points': [{'date': 'string', 'value': 'number',
+                        '[REDACTED_KEY]': 'string'}]}
