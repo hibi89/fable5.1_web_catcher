@@ -41,7 +41,8 @@ def test_full_runtime_one_page_all_six_mechanisms(tmp_path):
     charts = data["charts"]
     marked = [item for item in charts if item["library"] == "Highcharts"]
     assert marked and marked[0]["last_observed_update_ms"] is not None
-    assert any(item["library"] == "unknown" for item in charts)
+    assert not any(item["library"] == "unknown" and
+                   item["detection_level"] == "generic_markup_candidate" for item in charts), charts
     hypotheses = data["api"]["chart_candidates"]
     assert len(hypotheses) == 1, (hypotheses, data["api"]["endpoints"])
     chosen = hypotheses[0]
