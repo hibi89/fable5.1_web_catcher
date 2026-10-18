@@ -1,0 +1,28 @@
+name: User dashboard accuracy diagnostic
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tests/dashboard_accuracy_smoke.py'
+      - '.github/workflows/dashboard-diagnostic.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dashboard:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Install packages
+        run: python -m pip install --disable-pip-version-check -r requirements.txt
+      - name: Install Chromium
+        run: python -m playwright install --with-deps chromium
+      - name: Inspect one user-provided public URL without interacting
+        run: python -m pytest -q -s tests/dashboard_accuracy_smoke.py
