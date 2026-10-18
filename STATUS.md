@@ -1,4 +1,28 @@
-# STATUS.md — Fable 5.1 Web Catcher / Step 2 최종 완료
+# STATUS.md — Fable 5.1 Web Catcher / Step 3 자동 인수검사 완료
+
+## 현재 검증된 기준 (2026-10-18 KST)
+- Step 1 정적 CLI: 원본 7/7 PASS (유지).
+- Step 2 Chromium runtime CLI: 원본 9/9 PASS (유지).
+- **Step 3 headed Record CLI: 자동 fixture 인수검사 8/8, Windows 60 PASS / Ubuntu 실제 headed Chromium 16 PASS / 보조 공개 URL 4 PASS.** 실제 사람의 Windows 실사이트 로그인·필터·Enter 시나리오는 미검증.
+- 검증 소스 80f71d2b7de0f7a803872e76a616fe70f974e192; PR #1 → main 병합 e28ea7f1f5a91d2f7a69160377558c6bc72e836d. 문서 변경 HEAD는 별도.
+- 배포 없음: Python 로컬 CLI, Vercel/Production 미적용.
+
+## 새 구현
+--record, --max-duration (기본 900초), 반복 --allow-origin, 터미널 Enter·Ctrl+C·시간 만료·창 종료/EOF. 신규 tabs/main frames 문서 ID, 클릭·변경 마커, 승인 origin만 DOM/값 없는 응답 구조, 인증 요청 본문 보호, 이벤트 상한 생략 경고. Playwright 비영구 context. Step 2 수집기 유지 + 완료 JSON 구조 점진적 분석으로 페이지 이동 전 반영. result.json/report.md의 record 섹션 및 차트↔API **연관 후보**.
+주요 경로: scanner/record_scan.py, scanner/network.py, scanner/chart_mapping.py, scanner/report.py, scan.py, tests/test_record.py, tests/browser_record_check.py, docs/STEP3_FINAL_ACCEPTANCE.md.
+
+## 실제 검증
+- Windows workflow run 39126644441: python -m pytest -q → 60 passed.
+- Ubuntu run 39126644405: Xvfb Chromium 브라우저 fixture → 16 passed.
+- 선택 공개 홈페이지 smoke → 4 passed. 모든 테스트는 해당 SHA에서 PASS.
+- 원본 Step 1/2 회귀 포함. 개인정보/외부 origin/브라우저 중단/종료 시점 및 API 연관 후보 검증. 테스트용 login은 fixture에서 자동화한 것으로 실제 서비스 계정 로그인과 구별.
+
+## 남은 한계 및 다음 순서
+사용자의 Windows 표시 Chrome에서 직접 로그인→차트 필터 변경→Enter 확인 **검증 대기**. iframe DOM 분석 미지원(경고), 모든 사이트 차트 감지 및 API 인과 계보 확정 불가, Playwright decoded body 순간 절대 메모리 상한 미보장. 외부 URL을 받는 서버 배포 금지(SSRF 격리 없음). 필요하면 보안/범위/인증 변경은 먼저 승인. 인수인계 상세 HANDOFF.md, 증거 docs/STEP3_FINAL_ACCEPTANCE.md.
+
+---
+
+# Step 2 STATUS — 보존 이력
 
 ## 최종 판정 (2026-10-18 KST)
 - **Step 1 완료 7/7 (100%)**: 정적 CLI 회귀 유지.
