@@ -1,3 +1,16 @@
+# 2026-10-19 KST — Fable Web Catcher Step 4 구현/Mock 검증 후 인수
+
+- 사용자 제공 파일 `5.1_step4.txt`의 요구 Step 4 완료 기준 **10/10**을 코드/Mock·기존 회귀로 검증. [PR #12](https://github.com/hibi89/fable5.1_web_catcher/pull/12) main 병합 SHA `0fb2effcf1be3504d323231120cce70d23491d82`; 검증 소스 `3061db1b8fc7706a715975b4fe7e077eb05e3ff9`.
+- 새 파일 `scanner/llm_payload.py`, `llm_client.py`, `llm_validate.py`, `llm_report.py`, `llm_flow.py`; `scan.py` opt-in `--llm [--model]`, `--from-result`, `--llm-dry-run`. OpenAI API는 공식 SDK Responses structured JSON만 사용(도구 없음); 누락 키/모델, 401/429/5xx/timeout, refusal/incomplete/invalid reference 실패는 종료 3, 기존 결과 불변.
+- payload strict allowlist, host alias·경로 식별자·값 없는 구조, evidence 우선/중복제거/상한; 수정된 JSON 스키마 로컬 검증, 기존 confidence 소싱, 7개 한국어 구획 로컬 렌더. raw result/HTML/JS/session/쿠키 값/개인정보 후보 외부 미전송을 목표로 하나 익명화 완벽 보장하지 않음; 사용자 dry-run 검수 권장.
+- `rules/fingerprints.json` 총 **35기술 50규칙 신호** (기존 16/30 보존, 신규20 고유 패턴); 각 규칙 ID/weight/note/검증 memo + synthetic 양성·음성 fixture.
+- **Windows 91/91 PASS** run `39142853498`; **Ubuntu headed Chromium 23/23 PASS**, 공개사이트 smoke 4/4 run `39142853476`. Step 4의 API 응답/실패 테스트는 **mock**, *실제 OpenAI 유료 API 호출 전혀 없음(0건)*. 키·실모델이 제공되지 않아 라이브 smoke와 prompt-injection 모델 내성은 미검증.
+- 실행 시작: `python -m pip install -r requirements.txt` → `python scan.py --from-result ./out/demo/result.json --llm-dry-run` → preview 파일 검토 → 환경변수 `OPENAI_API_KEY`, `OPENAI_MODEL` 설정 → 선택적으로 `--from-result ... --llm --model ...`. CLI 비용·에러·한계 README 참고. 기존 `result.json`/`report.md` 불변, 별도 `llm_report.json`/`llm_report.md`.
+- 문서 `docs/STEP4_MOCK_ACCEPTANCE_2026-10-19.md`. 원본 Step 1~3 자동 인수 통과 유지. 미완: (a) 실제 OpenAI API opt-in smoke, (b) 실제 사용자 Windows Step3 수동 필터 조작→차트/API 근거, (c) 배포/서버 보안은 범위 밖. 다음 `ㄱ`은 새 검증/보완 단위로만 처리, 기존 테스트 반복 생산 금지.
+- 진행률: **전달된 Step 1~4의 자동/Mock 완료 기준 4/4 단계 구현**, 단 실제 API 성공·사용자 Windows 수동 실증은 미확인. 최종 상용제품 완성 %는 별도 범위 확정 전 계산 금지.
+
+---
+
 # 2026-10-19 KST — Fable 5.1 Web Catcher Step 3 대용량 JSON 부분 구조 인수
 
 - **PR #10 https://github.com/hibi89/fable5.1_web_catcher/pull/10 병합 완료**, source `df887d02c6602b3214c3aea9b8a6061e51611da6`, merge `07fb7ed6fd0b7fb095eb1710e4432557d5cffae5`.
