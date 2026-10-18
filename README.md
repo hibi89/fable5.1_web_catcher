@@ -287,3 +287,9 @@ python scan.py "https://daily-dashboard-ldh-1013.clevertide128.chatgpt.site/#v-d
 승인한 정확한 API origin에서 수집되는 JSON 응답이 `Content-Length`를 제공하지 않아 `size_unknown`으로 제외되던 경우, **Record 모드에 한해** 요청이 완료된 후 브라우저가 측정한 응답 본문 전송 크기를 확인합니다. 비압축 응답이고 크기가 128KiB 이하라면 JSON 자료형 구조만 분석하며, 값이나 원본 응답은 저장하지 않습니다. 크기 미확인·초과 및 미확인 길이의 압축 응답은 차단합니다. 본문을 읽은 뒤 실제 크기도 재검사합니다.
 
 이 정책은 `--record`에서만 적용되고 기존 `--runtime`의 `size_unknown` 정책은 유지됩니다. 외부 API는 권한 있는 origin을 `--allow-origin`으로 명시해야 합니다. 실제 실사이트 분석 성공과 차트↔API 연결은 별도 확인이 필요합니다. Playwright 본문 디코딩 과정의 메모리를 절대 상한으로 제한한 기능은 아닙니다. 변경/보안/테스트 근거: `docs/STEP3_HEADERLESS_JSON_BOUND_2026-10-18.md`.
+
+## Step 3 Record: 헤더 없는 압축 JSON의 안전한 크기 판정 (2026-10-18)
+
+Playwright `--record`로 수동 탐색 시 승인한 정확한 `--allow-origin`의 JSON 응답에 `Content-Length`가 없고 `gzip`/`br` 압축돼 있으면, CDP에서 관찰한 압축 **해제 후 바이트 수**가 128KiB 이하인 경우에만 기존 값 없는 필드/타입 구조 분석을 수행합니다. 실제 body를 읽은 후에도 측정 길이·상한을 검증합니다. 128KiB 초과, 불완전한 CDP 데이터, 중복 요청 등은 본문을 읽지 않고 수집 제한 사유를 기록합니다.
+
+이 기능은 Step 3에만 적용하며 Step 1/2 원래 정책은 유지됩니다. Chrome 자체에서 웹페이지의 모든 압축 응답을 메모리에 해제하는 현상을 막는 절대 메모리 제한 기능은 아닙니다. 특정 실제 데모사이트의 API는 디코딩 크기가 128KiB 초과하여 현재 `decoded_too_large`이고, 본문 구조 미수집이 정상입니다. 상세 근거 `docs/STEP3_COMPRESSED_JSON_DECODED_BOUND_2026-10-18.md`.
