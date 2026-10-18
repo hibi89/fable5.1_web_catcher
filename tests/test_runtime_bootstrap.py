@@ -77,3 +77,25 @@ def test_runtime_invalid_url_partial_result(tmp_path):
     assert data['scan_mode'] == 'runtime'
     assert data['target']['status_code'] is None
     assert 'PRIVATE' not in (out / 'result.json').read_text(encoding='utf-8')
+
+
+def test_runtime_browser_keeps_url_hash_without_persisting_it(tmp_path, monkeypatch):
+    import json
+    import scanner.runtime_scan as runtime_scan
+    from scan import scan
+
+    seen = []
+    def capture(url, result, *, timeout, wait, headed):
+        seen.append(url)
+        result["runtime"] = {}
+        result["target"]["final_url"] = "https://example.com/"
+        return False
+
+    monkeypatch.setattr(runtime_scan, "scan_runtime_page", capture)
+    code = scan("https://example.com/#v-dash", tmp_path, runtime=True, wait=0.1)
+    assert code == 0
+    assert seen == ["https://example.com/#v-dash"]
+    saved = (tmp_path / "result.json").read_text(encoding="utf-8") + (
+        tmp_path / "report.md").read_text(encoding="utf-8")
+    assert "#v-dash" not in saved
+    assert json.loads((tmp_path / "result.json").read_text(encoding="utf-8"))["scan_mode"] == "runtime"
