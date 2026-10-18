@@ -1,3 +1,16 @@
+# Step 3 실제 사용자 대시보드 피드백 반영 (2026-10-18)
+
+- 기존 Step 1/2 및 Step 3 CLI MVP 통과 상태 유지.
+- 실제 사용자 테스트 기록: 약 47.344초, 4개 차트 후보, 조작 228건, 문서 5건, API 상세 1건, 차트↔API 후보 0건, browser_closed 종료. 외부 n8n webhook의 응답 구조는 origin 미허용으로 분석 제외.
+- 수정: SPA hash/history 변경을 실제 새 JS 문서와 구분하고 중복 마커를 방지. chart ID 안정성 및 browser_closed 이후 last final_url 보존.
+- [검증 완료] PR #2 소스 SHA 173d42d3a33d29bf80c2dc5a137daccf0992216d / main 병합 SHA b5496a61bd82d56204bdab24c984288230a95713.
+- Windows CI run 39128145838: 60/60 PASS. Ubuntu headed Chromium CI run 39128145939: 19/19 PASS. 같은 run의 선택 공개 페이지 smoke: 4/4 PASS.
+- [미검증] 위 코드를 사용자 Windows 실사이트에 적용한 재시험; 명시적 --allow-origin 사용 이후 외부 JSON 구조 확보 여부; 실제 CSS/일반 SVG 차트↔API 계보 확정.
+- 보안: cross-origin 응답 구조 허용은 명시적으로 지정한 정확한 origin만. 일반 SVG/CSS 차트에 매핑 결과를 강제하지 않음. 공개 URL 서비스 배포 금지 유지.
+- 인수 근거: docs/STEP3_REAL_RECORD_FEEDBACK_2026-10-18.md, 기존 docs/STEP3_FINAL_ACCEPTANCE.md.
+
+---
+
 # STATUS.md — Fable 5.1 Web Catcher / Step 3 자동 인수검사 완료
 
 ## 현재 검증된 기준 (2026-10-18 KST)
