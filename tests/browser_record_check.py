@@ -6,6 +6,7 @@ the test-only injected hook. Production Record never synthesizes user actions.
 from __future__ import annotations
 
 import json
+import gzip
 import threading
 import time
 import subprocess
@@ -25,6 +26,26 @@ from tests.fixture_server import FixtureHandler
 class RecordHandler(FixtureHandler):
     def do_GET(self):
         path = self.path.split('?', 1)[0]
+        if path in ('/cross-api-gzip-chunked', '/cross-api-gzip-chunked-large'):
+            if path == '/cross-api-gzip-chunked':
+                data = {'points': [{'date': 'PRIVATE_DATE', 'value': 14,
+                                    'password': 'BODY_SECRET'}]}
+            else:
+                data = {'points': ['X' * 400000]}
+            compressed = gzip.compress(json.dumps(data).encode())
+            self.protocol_version = 'HTTP/1.1'
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Encoding', 'gzip')
+            self.send_header('Transfer-Encoding', 'chunked')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            for pos in range(0, len(compressed), 256):
+                block = compressed[pos:pos+256]
+                self.wfile.write(f'{len(block):X}\\r\\n'.encode() + block + b'\\r\\n')
+            self.wfile.write(b'0\\r\\n\\r\\n')
+            self.wfile.flush()
+            return
         if path in ('/cross-api-chunked', '/cross-api-chunked-large'):
             # Real HTTP chunked JSON: deliberately omit Content-Length.
             note = ('SENSITIVE_UNSAVED' if path == '/cross-api-chunked'
@@ -450,3 +471,44 @@ def test_real_headed_generic_svg_css_bar_geometry_evidence_without_raw_values():
     serialized = json.dumps(result, ensure_ascii=False)
     for value in ('75%', '60%', '99 99', 'M 0 0', 'theme-hover'):
         assert value not in serialized
+
+
+def test_real_headed_approved_gzip_without_length_bounded_by_decoded_bytes():
+    from scanner.network import MAX_JSON_BYTES
+    # Same manual Record scope; all network actions originate from local fixture.
+    for endpoint, permitted, expected in [
+        ('/cross-api-gzip-chunked', False, 'scope_or_auth_body_excluded'),
+        ('/cross-api-gzip-chunked', True, 'structure_only'),
+        ('/cross-api-gzip-chunked-large', True, 'decoded_too_large'),
+    ]:
+        with serve_record() as dashboard, serve_record() as external:
+            output = blank_result(dashboard)
+            fired = set()
+            def hook(context, pages, elapsed, stop):
+                if fired:
+                    return
+                fired.add(True)
+                pg = context.pages[0]
+                pg.evaluate('u => fetch(u).then(r => r.json()).then(x => !!x)',
+                            external + endpoint + '?access_token=REDACT_ME')
+                pg.wait_for_timeout(250)
+                stop.set()
+
+            assert run_record(dashboard + '/record', output, timeout=8,
+                              max_duration=15,
+                              allow_origin=[external] if permitted else [],
+                              stop_event=threading.Event(), test_hook=hook) is False
+            rows = [r for r in output['api']['endpoints']
+                    if r['url'].endswith(endpoint)]
+            assert len(rows) == 1, output['api']['endpoints']
+            row = rows[0]
+            assert row['response_body_analysis'] == expected, row
+            if expected == 'structure_only':
+                assert row['json_structure'] == {
+                    'points': [{'date': 'string', 'value': 'number',
+                                '[REDACTED_KEY]': 'string'}]}
+            else:
+                assert row['json_structure'] is None
+            saved = json.dumps(output)
+            for secret in ('REDACT_ME', 'PRIVATE_DATE', 'BODY_SECRET'):
+                assert secret not in saved
