@@ -159,8 +159,12 @@ class NetworkCollector:
             row['response_body_analysis'] = 'request_failed'
             self._body_queue.pop(request, None)
 
-    def finalize(self):
-        """Read only small, completed, size-known JSON responses; no raw persistence."""
+    def flush_completed(self):
+        """Incrementally summarize finished responses before a Record navigation.
+
+        Reuses the Step 2 parser and body/shape limits; does not clear pending
+        request associations or wait for WebSocket/SSE streams.
+        """
         for request, response in list(self._body_queue.items()):
             row = self._request_rows.get(request)
             if row is None or row['response_body_analysis'] != 'ready':
@@ -182,6 +186,17 @@ class NetworkCollector:
                 row['response_body_analysis'] = 'invalid_json'
             except Exception:
                 row['response_body_analysis'] = 'read_error'
+            finally:
+                self._body_queue.pop(request, None)
+        # Release decoded-body candidates promptly; keep request metadata for mapping.
+        for request, response in list(self._body_queue.items()):
+            row = self._request_rows.get(request)
+            if row is None or row['response_body_analysis'] not in ('waiting_for_requestfinished',):
+                self._body_queue.pop(request, None)
+
+    def finalize(self):
+        """Final read before shutdown; preserve existing Step 2 semantics."""
+        self.flush_completed()
         if self._over_limit:
             self.result['warnings'].append(f'XHR/fetch 수집 건수 상한 {self.max_endpoints}건 적용')
         if self._body_limit:

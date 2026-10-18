@@ -26,6 +26,8 @@ on:
       - 'tests/test_record.py'
       - 'tests/browser_mapping_check.py'
       - '.github/workflows/runtime-python311.yml'
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
