@@ -133,6 +133,8 @@ def test_real_headed_record_login_navigation_popup_filter_and_excluded_origin(tm
     assert any(row['response_body_analysis'] == 'scope_or_auth_body_excluded'
                for row in result['api']['endpoints'])
     assert any(c['library'] == 'Highcharts' for c in result['charts']), result['charts']
+    assert result['api']['chart_candidates'], (result['charts'], result['api']['endpoints'])
+    assert all(link['status'] == 'candidate_only' for link in result['api']['chart_candidates'])
     assert all(c['page_id'].startswith('page-') for c in result['charts'])
     assert all('PRIVATE' not in json.dumps(c) for c in result['charts'])
     saved = json.dumps(result, ensure_ascii=False)
