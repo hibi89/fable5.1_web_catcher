@@ -35,6 +35,20 @@ xvfb-run -a python -m pytest -q tests/browser_record_check.py
 
 Step 3 자동 fixture 검증: Windows 60/60, Ubuntu 실제 headed Chromium 16/16, 선택 공개 사이트 4/4 PASS. 사용자 Windows에서 실제 사이트 로그인·필터 변경·Enter까지의 수동 실사용 확인은 여전히 미검증입니다. 상세 근거: docs/STEP3_FINAL_ACCEPTANCE.md.
 
+## 최종 인수 — 새 설치 및 Windows 수동 확인
+
+새 Python 가상환경 설치 시 의존성 설치 후 **브라우저 바이너리를 별도 설치**해야 합니다.
+Windows PowerShell:
+
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m playwright install chromium
+.\.venv\Scripts\python.exe -m pytest -q
+```
+
+Linux CI에서는 `python -m playwright install --with-deps chromium`을 사용해 OS 라이브러리도 함께 설치합니다. 검증된 단위/브라우저/선택 외부 공개페이지 테스트는 서로 다른 실행입니다. Windows 사용자의 로그인·필터 변경을 포함한 실제 Record 확인은 [복사 가능한 최종 체크리스트](docs/WINDOWS_FINAL_CHECKLIST.md)를 참조하세요. 실제 유료 OpenAI API는 사전 승인 없이 호출하지 않습니다.
+
 ## 설치 및 실행
 
 ### Windows PowerShell
