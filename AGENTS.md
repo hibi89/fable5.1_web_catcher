@@ -10,3 +10,5 @@
 - 코드·문서 변경 완료 시 `STATUS.md`, `HANDOFF.md`, 중앙 `BOOK.md`를 실제 검증 상태로 갱신한다.
 
 - Step 2 사용자 지침 `fable5.1_step2.txt` 수령(2026-10-18). `--runtime`은 브라우저 격리·수동 상호작용 금지·비밀정보 비저장·부분 결과 보존이 필수. 기존 정적 CLI는 유지. Step 2는 단위별 구현하며 통합 완료로 오인하지 말 것.
+
+- Step 3 사용자 지침 `5 .1_step3.txt` 수령(2026-10-18). --record는 사용자 주도 headed 관찰만 허용한다. 승인 origin 외 DOM/JSON 구조 분석 금지, 인증/입력/세션/원문 저장 금지. 타이밍 차트↔API 후보는 인과관계 확정이 아니다. 서버 공개 배포는 SSRF 격리 전 금지. Step 1/2 회귀 보존, CI 근거는 `docs/STEP3_FINAL_ACCEPTANCE.md`.
