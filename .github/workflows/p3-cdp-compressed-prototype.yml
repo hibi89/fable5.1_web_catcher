@@ -21,4 +21,4 @@ jobs:
       - name: Install browser
         run: python -m playwright install --with-deps chromium
       - name: Run only local fixture; no external websites
-        run: xvfb-run -a python -u -m tests.p3_cdp_compressed_experiment
+        run: xvfb-run -a python -u -m tests.p3_cdp_decoded_length_experiment
