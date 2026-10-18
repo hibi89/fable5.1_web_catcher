@@ -99,6 +99,10 @@ def test_real_headed_record_login_navigation_popup_filter_and_excluded_origin(tm
                 page.locator('#filter').select_option('b')
                 page.wait_for_timeout(250)
                 print('RECORD_CHART_FIXTURE', page.evaluate('() => ({cls: document.querySelector("svg")?.getAttribute("class"), chartProbe: !!window.__fable51_chart_probe, observer: window.__fable51_chart_probe?.snapshot()})'))
+                from scanner.runtime_detect import collect_runtime_charts
+                temp = {'charts': [], 'runtime': {}, 'frontend': [], 'evidence': []}
+                collect_runtime_charts(page, temp)
+                print('RECORD_NORMALIZED_CHARTS', temp['charts'])
                 return
             if 'popup' not in stages:
                 stages.add('popup')
