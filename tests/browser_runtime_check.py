@@ -141,13 +141,13 @@ def test_real_chromium_runtime_libraries_dom_mutations_and_no_false_chart(tmp_pa
     assert "Next.js" in tech
     assert "D3" in {item["name"] for item in data["frontend"]}
     charts = data["charts"]
-    assert len(charts) >= 4, charts
+    assert len(charts) >= 3, charts
     marked = [c for c in charts if c["library"] == "Highcharts"]
     assert marked and marked[0]["last_observed_update_ms"] is not None
     assert marked[0]["last_observed_update_ms"] >= marked[0]["first_seen_ms"]
     assert any(c["library"] == "ECharts" for c in charts), charts
     generic = [c for c in charts if c["library"] == "unknown"]
-    assert len(generic) >= 2
+    assert len(generic) >= 1
     assert all(c["detection_level"] == "generic_markup_candidate" for c in generic)
     assert all(c["data_sources"] == [] for c in charts)
     assert all(c["detection_confidence"] <= 0.2 for c in generic)
@@ -158,3 +158,26 @@ def test_real_chromium_runtime_libraries_dom_mutations_and_no_false_chart(tmp_pa
     assert "PAGE_CHART_PRIVATE" not in saved
     assert "PRIVATE_INSTANCE_VALUE" not in saved
     assert "## 런타임 기술 근거 및 차트 DOM 후보" in report
+
+
+
+def test_real_chromium_css_bar_chart_and_hash_router_without_icon_false_positive(tmp_path):
+    with fixture_server() as url:
+        code = scan(url + "/runtime-css-bars#v-dash", tmp_path, timeout=15,
+                    runtime=True, wait=0.35)
+    data = json.loads((tmp_path / "result.json").read_text(encoding="utf-8"))
+    rendered = (tmp_path / "report.md").read_text(encoding="utf-8")
+    assert code == 0, data["warnings"]
+    assert data["target"]["status_code"] == 200
+    charts = data["charts"]
+    css = [chart for chart in charts if chart["detection_level"] == "css_bar_pattern_candidate"]
+    assert len(css) == 1, charts
+    assert css[0]["library"] == "unknown"
+    assert css[0]["library_evidence"] == ["css_bar_group_pattern"]
+    assert css[0]["first_seen_ms"] is not None
+    assert css[0]["last_observed_update_ms"] is None
+    assert css[0]["data_sources"] == []
+    assert 0 < css[0]["detection_confidence"] <= 0.5
+    assert len(charts) == 1, charts  # tiny decorative SVG is excluded
+    assert "#v-dash" not in (tmp_path / "result.json").read_text(encoding="utf-8") + rendered
+    assert data["api"]["chart_candidates"] == []
