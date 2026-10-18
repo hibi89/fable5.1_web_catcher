@@ -107,3 +107,37 @@ python -m pytest -q
 ## Step 2 확장 지점
 
 정적 수집 `scanner/static_scan.py`, 규칙 판정 `scanner/fingerprints.py`, 공통 데이터 `scanner/models.py`, 보고서 `scanner/report.py`가 분리되어 있습니다. 향후 선택적 브라우저 분석 결과도 같은 스키마로 반환할 수 있으나, **현재 Playwright·Record·LLM·웹 UI는 구현하지 않았습니다.**
+
+## Step 2 — 단위 1: 런타임 브라우저 실행 기반 (부분 구현)
+
+정적 모드는 **변경 없이** `python scan.py URL --out ./out/static`으로 계속 사용합니다.
+Playwright 기반 런타임 모드는 다음 명령으로 실행합니다.
+
+```bash
+python -m pip install -r requirements.txt
+python -m playwright install chromium
+python scan.py https://example.com --runtime --out ./out/runtime
+python scan.py https://example.com --runtime --headed --wait 10 --out ./out/runtime
+```
+
+`--wait`의 기본값은 10초이며 첫 DOMContentLoaded 뒤 이벤트를 처리하는 시간입니다.
+격리된 Chromium context를 사용하고, 로딩 후 최대 두 번 스크롤합니다.
+로그인·클릭·폼 제출·내부 링크 탐색은 수행하지 않습니다.
+오류가 나면 부분 JSON/보고서를 남기고 종료 코드 2를 반환합니다.
+`runtime.scope=navigation_only`는 **동작 기반만 구현**했다는 의미입니다.
+추가된 `runtime.xhr_fetch_requests_seen`·`runtime.xhr_fetch_responses_seen`는 개수만 기록합니다.
+**아직 API endpoint, JSON 구조, 차트 후보, 차트↔API 연결, 런타임 라이브러리, 번들 후보를 분석하지 않습니다.**
+따라서 이번 단위 결과를 Step 2 완료라고 해석하지 마세요.
+
+테스트는 두 종류로 구분합니다.
+
+```bash
+python -m pytest -q
+python -m pytest -q tests/browser_runtime_check.py
+```
+
+두 번째 명령은 Chromium이 설치된 환경에서만 동작하는 **로컬 fixture의 실제 브라우저 통합 테스트**입니다.
+전용 GitHub Actions `.github/workflows/runtime-python311.yml`에서도 별도로 실행합니다.
+`--headed`는 화면 표시가 가능한 환경에서만 사용하세요.
+Chromium 실행이 실패하면 `python -m playwright install chromium`을 확인하세요.
+SSE, WebSocket, API/차트 수집 및 서버 측 SSRF 격리는 향후 단위의 작업입니다.
