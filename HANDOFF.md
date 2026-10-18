@@ -1,3 +1,17 @@
+# 2026-10-19 KST — p3 Step 5 최종 자동 인수 완료 및 후속 업무
+
+- 사용자 지침 `5.1_step5.txt`에 대한 **Step 5 구현/수용 기준 10/10**. [PR #16](https://github.com/hibi89/fable5.1_web_catcher/pull/16) 병합 SHA `7de7e26faec46120bbdfb509892ca267cea514c4`, 검증 source `6f32544299ea5181d4a90321f32e7706857781eb`.
+- 파일: `scanner/step5_common.py`, `scanner/batch.py`, `scanner/compare.py`, `scanner/contracts.py`; `scan.py` argparse 3모드 + `--delay`, `--max-urls`, `README.md`, `requirements.txt` jsonschema 테스트 검증; `tests/test_batch.py`, `tests/test_compare.py`, `tests/test_contracts.py` 신규.
+- 배치: `python scan.py --batch urls.txt --out ./out/batch` (또는 `--runtime --wait 10`). 순차 실행만, 별도 브라우저 컨텍스트, 기본 2초 지연/상한50, 입력 line 오류·중복 제거, origin 429 skip, Ctrl+C 부분완료 보존, atomic checkpoint; 원본 URL/host/쿼리/경로 비밀은 실행별 익명 pseudo-origin으로 치환, 기존 결과를 조용히 덮어쓰지 않음.
+- 비교: `python scan.py --compare old/result.json new/result.json --out ./out/diff`: 파일만 사용, 동일/이종/식별불명 구분, 기술/evidence/API normalized origin+path/JSON shape/차트 후보 및 수집 범위 메타데이터 보수적 diff, 미관찰 != 삭제.
+- 계약: `python scan.py --from-result ./out/demo/result.json --export-contracts` (기본 `./out/demo/contracts/`): 관찰 JSON을 status/content-type variant 및 Draft2020-12 참고 schemas와 대시보드 필드 후보 표로 변환. `required`/실제 값/enum/date format 등 임의 확정 금지; 부분 JSON 샘플은 전체 계약으로 승격하지 않음.
+- 최종 CI **Windows 123/123 PASS** [39148097390](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39148097390), **실제 headed Chromium 23/23 PASS + 선택 공개 홈페이지 smoke 4/4** [39148097419](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39148097419). 사용자 Step5 완료 요구 순서인 **localhost URL 3개 배치 → 2개 결과 diff → 한 결과 contracts.md 생성**이 연속 fixture로 검증됨. 익명 배치 endpoint가 샘플 스키마를 생성하는 별도 fixture도 PASS.
+- **미확인 항목**: 실제 여러 외부 사이트 배치 Runtime의 장기 운영/자격증명·브라우저 현장 분리, 사용자 Windows Step3 수동 필터→차트/API 근거, Step4 실제 OpenAI 모델 API. Step3 CDP 길이 이벤트 미매칭은 여전히 fail-closed. 자동 resume, 공개 SaaS/SSRF 격리, 웹 UI/DB/Docker는 Step5 요구에서 제외.
+- 문서 `docs/STEP5_FINAL_ACCEPTANCE_2026-10-19.md`; 이후 `ㄱ`은 사용자 지침 Step1~5 재구현이 아니라 **남은 현장 수용 검증 / 다음 명시 지침 한 단위**부터 이어갈 것.
+- 전달된 Step1~5 **구현/자동·Mock 인수 5/5단계**로 진도 유의미 상승, 그러나 실사용 모든 배포환경 100%와 혼동 금지.
+
+---
+
 # 2026-10-19 KST — p3 CDP fail-closed 원인 코드 작업 인수
 
 - 3회×8건 localhost Chromium 조사: `DecodedLengthTracker.decide`의 `no_cdp_match` **4/8, 5/8, 3/8**; 500ms 대기만으로 사라지지 않음. 별도 이벤트 listener 검사는 데이터를 수집하지 못했으므로 **frame ID vs CDP 전달 vs request-key mapping 원인 확정 불가**. [PR #14](https://github.com/hibi89/fable5.1_web_catcher/pull/14) diagnostic-only closed unmerged.
