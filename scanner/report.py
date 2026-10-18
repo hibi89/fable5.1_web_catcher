@@ -119,7 +119,8 @@ def to_markdown(result: dict) -> str:
                 f" · confidence {item['detection_confidence']:.2f}"
                 f" · selector {item['selector']}"
                 f" · 첫 관찰 UTC ms {item['first_seen_ms']}"
-                f" · 속성 갱신 UTC ms {item['last_observed_update_ms']}"
+                f" · 관찰된 변화 UTC ms {item['last_observed_update_ms']}"
+                f" · 변화 단서 {item.get('change_evidence') or 'none'}"
                 f" · 근거 {','.join(item['library_evidence']) or 'none'}"
                 f" · 연관 API 후보 {len(item['data_sources'])}건"
             )

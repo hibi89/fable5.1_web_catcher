@@ -55,6 +55,33 @@ class RecordHandler(FixtureHandler):
             self.end_headers()
             self.wfile.write(obj)
             return
+        if path == '/record-generic-changes':
+            body = b"""<!doctype html><html><body>
+            <button id='hover'>Cosmetic change</button>
+            <button id='update'>Geometry change</button>
+            <svg width='260' height='140' viewBox='0 0 260 140'>
+              <g><path d='M 0 0 L 30 20'/><path d='M 4 8 L 40 35'/></g>
+            </svg>
+            <section style='width:300px;height:160px'>
+              <div class='bar' style='width:10%;height:16px'></div>
+              <div class='bar' style='width:20%;height:16px'></div>
+              <div class='bar' style='width:30%;height:16px'></div>
+              <div class='bar' style='width:40%;height:16px'></div>
+              <div class='bar' style='width:50%;height:16px'></div>
+            </section>
+            <script>
+              const svg = document.querySelector('svg');
+              const bars = document.querySelectorAll('.bar');
+              document.getElementById('hover').onclick = () => {
+                svg.setAttribute('class', 'theme-hover');
+              };
+              document.getElementById('update').onclick = () => {
+                svg.querySelector('path').setAttribute('d', 'M 0 0 L 99 99');
+                bars[0].style.width = '75%';
+                bars[1].style.width = '60%';
+              };
+            </script></body></html>"""
+            return self._dynamic_response(body, 'text/html')
         if path == '/record-spa':
             body = b"""<!doctype html><html><body>
             <button id='change'>Change</button>
@@ -381,3 +408,45 @@ def test_real_headed_headerless_chunked_json_authorization_and_size_bound():
             assert 'QUERY_SECRET' not in json.dumps(output)
             assert 'SENSITIVE_UNSAVED' not in json.dumps(output)
             assert 'PRIVATE_DATE' not in json.dumps(output)
+
+
+def test_real_headed_generic_svg_css_bar_geometry_evidence_without_raw_values():
+    from scanner.runtime_detect import collect_runtime_charts
+    observed = set()
+    with serve_record() as url:
+        result = blank_result(url)
+        def hook(context, pages, elapsed, stop):
+            if 'checked' in observed:
+                return
+            observed.add('checked')
+            page = context.pages[0]
+            local = {'charts': [], 'runtime': {}, 'frontend': [], 'evidence': []}
+            collect_runtime_charts(page, local)
+            baseline = {c['detection_level']: c for c in local['charts']}
+            assert baseline['css_bar_pattern_candidate']['last_observed_update_ms'] is None
+            assert baseline['generic_markup_candidate']['last_observed_update_ms'] is None
+            page.locator('#hover').click()
+            page.wait_for_timeout(100)
+            collect_runtime_charts(page, local)
+            hover = next(c for c in local['charts']
+                         if c['detection_level'] == 'generic_markup_candidate')
+            assert hover['last_observed_update_ms'] is None, hover
+            page.locator('#update').click()
+            page.wait_for_timeout(160)
+            collect_runtime_charts(page, local)
+            updates = {c['detection_level']: c for c in local['charts']}
+            assert updates['generic_markup_candidate']['change_evidence'] == 'svg_geometry_changed'
+            assert updates['css_bar_pattern_candidate']['change_evidence'] == 'css_bar_geometry_changed'
+            assert all(c['last_observed_update_ms'] for c in updates.values())
+            stop.set()
+        assert run_record(url+'/record-generic-changes', result, timeout=8,
+                          max_duration=15, stop_event=threading.Event(), test_hook=hook) is False
+    charts = {c['detection_level']: c for c in result['charts']}
+    assert len(charts) == 2, result['charts']
+    assert charts['generic_markup_candidate']['change_evidence'] == 'svg_geometry_changed'
+    assert charts['css_bar_pattern_candidate']['change_evidence'] == 'css_bar_geometry_changed'
+    assert all(type(c['last_observed_update_ms']) is int for c in charts.values())
+    assert result['api'].get('chart_candidates', []) == []
+    serialized = json.dumps(result, ensure_ascii=False)
+    for value in ('75%', '60%', '99 99', 'M 0 0', 'theme-hover'):
+        assert value not in serialized
