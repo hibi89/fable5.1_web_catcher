@@ -1,3 +1,14 @@
+# 2026-10-18 23:37 KST — p3 PR #4 병합 후 인수인계
+
+- **PR #4 main 병합 완료**: `67e72529be4d5e6a190d7c63fc0c840878301965`, 검증 기능 SHA `30a59be00d473a1040d67aa0d3166f41b70f5e70`. GitHub 저장소 Public 전환 후 Actions가 정상 동작해 CI 차단이 해소됨.
+- 최신 테스트 GitHub Windows [39136596883](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39136596883) **65/65 PASS**, Ubuntu 실제 headed Chromium [39136596876](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39136596876) **21/21 PASS**, 같은 workflow 선택 공개 사이트 **4/4 PASS**. 최초 Chromium fixture의 optional `chart_candidates` 필드 검증 오류는 테스트 수정 후 재시험 통과.
+- `scanner/runtime_detect.py`: SVG geometry/childList, CSS bar 그룹 변형 시간과 `change_evidence` 세 분류를 읽기 전용 관찰. hover CSS class-only는 제외. `scanner/record_scan.py`: 동일 구조 selector에 대한 이전 시각 보존. `scanner/report.py`: 변화 증거를 분리 표기. `tests/test_record.py`, `tests/browser_record_check.py`: 원문 비저장/중복 분기/실제 Chromium 테스트.
+- **과거 'PR #4 open/CI 차단' 구간은 보존 이력이며 현 최종 상태 아님**. 상세: `docs/STEP3_GENERIC_CHART_GEOMETRY_PENDING_2026-10-18.md`의 '후속 검증 확정' 섹션.
+- **후속 미확인 사항**: Windows 사용자 실사이트에서 새 기능의 `change_evidence` 발생 여부, 헤더 없는 외부 API의 JSON 구조 수집 여부, 데이터 JSON↔실제 CSS/SVG 차트 계보는 미검증. iframe main-frame 한정, browser_closed 스냅샷 경고 가능, 절대 브라우저 메모리 상한 없는 JSON 바디, SSRF 격리 없는 공개 서버 배포 금지 유지.
+- 다음 `ㄱ`은 **새 작업 단위**로만 처리. 필요하면 사용자 실사이트 1회 Record 검수 또는 generic chart 연결 근거를 신중하게 보강. 기존 CI 재실행/중복 구현은 불필요.
+
+---
+
 # p3 Step 3 SVG/CSS 변경 증거 강화 — PR #4 CI 보류 인수 (2026-10-18 22:44 KST)
 
 - 사용자의 `r`을 한글 `ㄱ`으로 해석하여 1단위 개발 진행. PR #4 https://github.com/hibi89/fable5.1_web_catcher/pull/4, 브랜치 `fix/step3-generic-chart-change-evidence-20261018`. **main 미병합**.
