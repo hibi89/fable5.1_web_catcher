@@ -103,8 +103,10 @@ def _is_graphql(url: str, mime: str | None) -> bool:
 class NetworkCollector:
     """Attach four passive listeners before page.goto; flush after bounded wait."""
 
-    def __init__(self, result: dict):
+    def __init__(self, result: dict, *, allow_unknown_length: bool = False):
         self.result = result
+        # Opt-in only for Step 3 Record; Step 2's original policy is immutable.
+        self.allow_unknown_length = allow_unknown_length
         self.records = result['api']['endpoints']
         self._request_rows = {}
         self._body_queue = {}
@@ -157,7 +159,9 @@ class NetworkCollector:
             row['response_body_analysis'] = 'non_json'
             return
         length = _length(headers)
-        if length is None:
+        if length is None and not self.allow_unknown_length:
+            row['response_body_analysis'] = 'size_unknown'
+        elif length is None:
             # A chunked/streamed JSON response can omit Content-Length.
             # At requestfinished consult Playwright's observed transfer size
             # before considering a body read. Compressed unknown-length
