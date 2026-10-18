@@ -59,10 +59,12 @@ def test_cross_origin_unfinished_and_secrets_are_not_persisted():
     c.on_finished(remote)
     c.finalize("https://example.test/index")
     assert one.calls == 1 and two.calls == 0
-    candidates = r["api"]["bundle_candidates"]
+    candidates = r["api"]["candidates"]
     assert len(candidates) == 1
     assert candidates[0]["path"] == "/api/trends"
     assert candidates[0]["observed_request"] is False
+    assert candidates[0]["discovered_by"] == "bundle_string"
+    assert "URL_PRIVATE" not in candidates[0]["source_script"]
     saved = json.dumps(r)
     for secret in ("URL_PRIVATE", "BODY_PRIVATE", "/api/remote"):
         assert secret not in saved
@@ -85,7 +87,7 @@ def test_unfinished_unknown_size_oversized_and_wrong_mime_not_read():
             c.on_finished(req)
         c.finalize("https://example.test/")
         assert response.calls == 0
-        assert r["api"]["bundle_candidates"] == []
+        assert r["api"]["candidates"] == []
 
 
 def test_observed_api_is_excluded_and_repeat_paths_deduped():
@@ -97,7 +99,7 @@ def test_observed_api_is_excluded_and_repeat_paths_deduped():
     c.on_response(resp)
     c.on_finished(req)
     c.finalize("https://example.test/")
-    assert [x["path"] for x in r["api"]["bundle_candidates"]] == ["/api/new"]
+    assert [x["path"] for x in r["api"]["candidates"]] == ["/api/new"]
     assert r["api"]["endpoints"][0]["url"].endswith("PRIVATE")
 
 
@@ -121,5 +123,5 @@ def test_at_most_ten_loaded_js_responses_and_limit_warning():
     c.finalize("https://example.test/")
     assert r["runtime"]["bundle_scan"]["scanned_scripts"] == 10
     assert r["runtime"]["bundle_scan"]["limited"] is True
-    assert len(r["api"]["bundle_candidates"]) == 10
+    assert len(r["api"]["candidates"]) == 10
     assert any("상한" in message for message in r["warnings"])

@@ -81,7 +81,7 @@ def map_chart_api_candidates(result: dict) -> None:
     api = result.setdefault("api", {})
     charts = result.get("charts", [])
     endpoints = api.get("endpoints", [])
-    api["candidates"] = []
+    api["chart_candidates"] = []
     for chart in charts:
         chart["data_sources"] = []
 
@@ -89,7 +89,7 @@ def map_chart_api_candidates(result: dict) -> None:
     ambiguous = 0
     missing = 0
     for chart in charts:
-        if len(api["candidates"]) >= MAX_MAPPINGS:
+        if len(api["chart_candidates"]) >= MAX_MAPPINGS:
             break
         if not _qualified_chart(chart):
             continue
@@ -118,7 +118,7 @@ def map_chart_api_candidates(result: dict) -> None:
             "time_delta_ms": delta,
             "limitations": list(LIMITATIONS),
         }
-        api["candidates"].append(link)
+        api["chart_candidates"].append(link)
         chart["data_sources"] = [endpoint["id"]]
 
     result.setdefault("runtime", {})["mapping_analysis"] = {
@@ -127,7 +127,7 @@ def map_chart_api_candidates(result: dict) -> None:
         "marked_charts_assessed": assessed,
         "ambiguous_charts_unlinked": ambiguous,
         "no_matching_response": missing,
-        "hypotheses_created": len(api["candidates"]),
+        "hypotheses_created": len(api["chart_candidates"]),
         "repeated_consistency_checked": False,
         "calibrated_probability": False,
     }

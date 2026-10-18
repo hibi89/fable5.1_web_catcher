@@ -68,7 +68,7 @@ def to_markdown(result: dict) -> str:
             "- 차트↔API는 연관 후보만 제시하며 JS 문자열 후보는 미검증 상태로 분리합니다. 실제 데이터 연결은 확인할 수 없습니다.", "",
         ]
         mapping = runtime.get("mapping_analysis", {})
-        guesses = result["api"]["candidates"]
+        guesses = result["api"].get("chart_candidates", [])
         candidate_lines = ["## 차트↔API 연관 후보 (확정 아님)", "",
                            f"- 후보 수: {len(guesses)}건",
                            f"- 경합으로 연결 보류: {mapping.get('ambiguous_charts_unlinked', 0)}건",
@@ -84,7 +84,7 @@ def to_markdown(result: dict) -> str:
         candidate_lines.append("")
         lines[lines.index("## 한계 및 주의"):lines.index("## 한계 및 주의")] = candidate_lines
         bundle = runtime.get("bundle_scan", {})
-        paths = result["api"].get("bundle_candidates", [])
+        paths = result["api"].get("candidates", [])
         bundle_lines = ["## 로드된 JS 문자열 기반 미검증 API 후보", "",
                         f"- 실제 로드된 동일 출처 JS 검사: {bundle.get('scanned_scripts', 0)}건",
                         f"- 미검증 문자열 경로: {len(paths)}건",
@@ -92,7 +92,7 @@ def to_markdown(result: dict) -> str:
                         "- 이 문자열은 실제 API 요청을 의미하지 않습니다.", ""]
         for item in paths:
             bundle_lines.append(
-                f"- {item['path']} · {item['source_script_id']}"
+                f"- {item['path']} · {item['source_script']}"
                 " · unverified_string_literal · confidence 0.200 (확률 아님)"
             )
         bundle_lines.append("")

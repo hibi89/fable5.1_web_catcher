@@ -9,7 +9,7 @@ import re
 from urllib.parse import urlsplit
 
 from .network import _length, _mime
-from .sanitize import SECRET_KEYS
+from .sanitize import SECRET_KEYS, safe_url
 
 MAX_SCRIPTS = 10
 MAX_BYTES = 131072
@@ -90,7 +90,7 @@ class BundleCollector:
 
     def finalize(self, page_url):
         result = self.result
-        result["api"]["bundle_candidates"] = []
+        result["api"]["candidates"] = []
         meta = {"mode": "observed_script_responses_only", "scanned_scripts": 0,
                 "candidate_count": 0, "skipped_cross_origin": 0,
                 "skipped_incomplete": 0, "skipped_oversize_decoded": 0,
@@ -122,17 +122,19 @@ class BundleCollector:
                 for path in _extract(code, origin):
                     if path in seen or path in observed:
                         continue
-                    if len(result["api"]["bundle_candidates"]) >= MAX_CANDIDATES:
+                    if len(result["api"]["candidates"]) >= MAX_CANDIDATES:
                         meta["limited"] = True
                         break
                     seen.add(path)
-                    result["api"]["bundle_candidates"].append({
+                    result["api"]["candidates"].append({
                         "path": path, "source_script_id": source,
+                        "source_script": safe_url(response.url),
+                        "discovered_by": "bundle_string",
                         "status": "unverified_string_literal",
                         "confidence": 0.2, "observed_request": False,
                         "evidence": "quoted_literal_in_loaded_same_origin_javascript",
                     })
-            meta["candidate_count"] = len(result["api"]["bundle_candidates"])
+            meta["candidate_count"] = len(result["api"]["candidates"])
         finally:
             self.responses.clear()
             self.finished.clear()
