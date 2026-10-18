@@ -17,7 +17,11 @@ from scanner.static_scan import scan_page
 def scan(url: str, out: Path, timeout: float = 10.0, *, runtime: bool = False,
          headed: bool = False, wait: float = 10.0, record: bool = False,
          max_duration: float = 900.0, allow_origin: list[str] | None = None) -> int:
-    result = blank_result(safe_url(url))
+    if record:
+        from scanner.record_scan import record_safe_url
+        result = blank_result(record_safe_url(url))
+    else:
+        result = blank_result(safe_url(url))
     fatal = False
     if record:
         result['scan_mode'] = 'record'
@@ -27,6 +31,11 @@ def scan(url: str, out: Path, timeout: float = 10.0, *, runtime: bool = False,
         sanitized_request = request_url(url)
         if record:
             from scanner.record_scan import run_record
+            fragment = urlsplit(url).fragment
+            if fragment and len(fragment) <= 512:
+                sanitized_request += '#' + fragment
+            elif fragment:
+                result['warnings'].append('브라우저 해시 길이 상한 초과: fragment 생략')
             fatal = run_record(sanitized_request, result, timeout=timeout,
                                max_duration=max_duration, allow_origin=allow_origin)
         elif runtime:
