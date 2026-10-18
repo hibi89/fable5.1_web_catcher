@@ -1,3 +1,22 @@
+# Step 3 실제 사용자 Record 후속 인수인계 (2026-10-18)
+
+## 테스트에서 확인된 현상과 원인
+사용자가 로컬 headed Record로 실제 대시보드 47.344초 조작. HTTP 200 및 4개 차트 후보, 사용자 조작 마커 228건, nav-0001~0005 반복. 같은 클릭 타임스탬프가 여러 nav에 다시 나타나 SPA fragment/history 변경을 새 document로 취급하는 결함이 의심되었고 local Chromium fixture로 재현·수정했다. 사용자 종료 방식 browser_closed는 정상이나 target.final_url unknown 문제가 있어 마지막 마스킹 URL 보존 수정. 같은 nav의 SVG/CSS 차트 후보에 같은 chart ID가 생성될 위험도 수정.
+
+## 수정/정확도/보안
+Playwright framenavigated에 포함되는 same-document SPA URL 변경은 performance.timeOrigin으로 판별하고 실제 새로운 문서만 새 navigation_id 배정. 조작 마커의 cursor/seq 중복 방지. 구조별 안정적 차트 ID 사용. 외부 n8n JSON API는 기본 허용 scope 밖이므로 메타데이터만 기록한 것이 올바른 동작이다. 권한 있는 API origin만 반복 --allow-origin으로 허용. 추가한 Chromium fixture에서 외부 응답은 허용되지 않으면 구조 null, 허용하면 값 없는 JSON 자료형만 수집됨을 검증했다. generic SVG/CSS bar의 차트↔API 연관을 근거 없이 억지 생성하지 않는다.
+
+## SHA·테스트·남은 작업
+- PR #2 병합 main 기능: b5496a61bd82d56204bdab24c984288230a95713.
+- 검증 SHA: 173d42d3a33d29bf80c2dc5a137daccf0992216d.
+- Windows Python 3.11 run 39128145838: 60/60 PASS. Ubuntu 실제 headed Chromium run 39128145939: 19/19 PASS, 선택 공개 페이지 4/4 PASS.
+- 상세: docs/STEP3_REAL_RECORD_FEEDBACK_2026-10-18.md.
+- 사용자 Windows의 수정 후 실사이트 재시험 **아직 진행 전**. API와 차트의 확정된 인과 데이터 계보는 검증 대상이 아니며, 엄격한 generic chart heuristic 때문에 매핑 후보가 여전히 0건일 수 있다.
+- 다음 수행: GitHub 최신 main 코드 적용. Git clone이면 git pull, ZIP 폴더면 새 ZIP 수동 압축 해제. 권한이 있으면 --allow-origin https://practice02.61-107-199-22.sslip.io 로 외부 webhook 응답 구조 승인. Record 실행→대시보드 필터 조작→Enter→result.json/report.md의 문서/마커 중복·final_url·API 응답 처리 확인.
+- 기존 원본 Step 1/2, Record 보안 원칙, 과거 이력은 아래에 보존.
+
+---
+
 # HANDOFF.md — Fable 5.1 Web Catcher / Step 3 CLI MVP
 
 > 최신 인수인계(2026-10-18 KST). 아래 기존 Step 2 HANDOFF는 보존한 과거 이력이다. 최신 개발 기준은 이 Step 3 섹션 및 docs/STEP3_FINAL_ACCEPTANCE.md.
