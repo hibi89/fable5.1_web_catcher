@@ -172,7 +172,7 @@ def test_missing_length_rejects_large_compressed_or_unmeasurable_body_without_re
 
 def test_missing_length_measurement_underreports_but_decoded_body_exceeds_limit():
     data = blank_result('https://example.test')
-    collector = NetworkCollector(data)
+    collector = NetworkCollector(data, allow_unknown_length=True)
     req = FakeRequest('https://example.test/api/chunked', transfer_bytes=32)
     response = FakeResponse(req, b'{' + b' ' * MAX_JSON_BYTES + b'}')
     collector.on_request(req)
