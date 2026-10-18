@@ -42,8 +42,8 @@ class RecordHandler(FixtureHandler):
             self.end_headers()
             for pos in range(0, len(compressed), 256):
                 block = compressed[pos:pos+256]
-                self.wfile.write(f'{len(block):X}\\r\\n'.encode() + block + b'\\r\\n')
-            self.wfile.write(b'0\\r\\n\\r\\n')
+                self.wfile.write(f'{len(block):X}\r\n'.encode() + block + b'\r\n')
+            self.wfile.write(b'0\r\n\r\n')
             self.wfile.flush()
             return
         if path in ('/cross-api-chunked', '/cross-api-chunked-large'):
