@@ -11,7 +11,7 @@ from urllib.parse import urlsplit
 from .network import _length, _mime
 from .sanitize import SECRET_KEYS
 
-MAX_SCRIPTS = 12
+MAX_SCRIPTS = 10
 MAX_BYTES = 131072
 MAX_CANDIDATES = 30
 MIMES = {"application/javascript", "text/javascript", "application/x-javascript"}
