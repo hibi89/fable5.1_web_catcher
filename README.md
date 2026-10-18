@@ -268,3 +268,16 @@ api.chart_candidates에는 chart_id, endpoint_id, candidate_only 상태, 비확�
 
 실사이트 실행:
     python scan.py "https://daily-dashboard-ldh-1013.clevertide128.chatgpt.site/#v-dash" --runtime --wait 10 --out ./out/dashboard-test
+
+
+## 2026-10-18 실제 대시보드 Record 재검수 (PR #2 반영)
+
+수동 Record 보고서(47.344초)에서 화면 전환 후 동일 클릭이 여러 navigation ID에 다시 기록되고, 전체 브라우저 창을 닫으면 final_url이 unknown으로 표시되는 문제가 발견되었습니다. 현재 main에서는 SPA의 hash/history 변경을 같은 JS 문서로 구분하고, 클릭 중복·차트 후보 ID 충돌·종료 시 최종 URL 미기록을 수정했습니다. Windows 60/60, 실제 headed Chromium 19/19, 선택 사이트 4/4 테스트 PASS. 자세한 근거는 docs/STEP3_REAL_RECORD_FEEDBACK_2026-10-18.md.
+
+원본 대시보드가 호출한 n8n 웹훅은 **다른 origin**입니다. 기본 정책에서는 응답 JSON을 분석하지 않습니다. 해당 서비스를 분석할 권한이 있을 때만 다음처럼 추가 허용하세요:
+
+~~~powershell
+python scan.py "https://daily-dashboard-ldh-1013.clevertide128.chatgpt.site/#v-dash" --record --allow-origin "https://practice02.61-107-199-22.sslip.io" --max-duration 900 --out ./out/record-after-fix
+~~~
+
+브라우저에서 직접 탭·필터를 변경한 뒤 터미널 Enter를 누르세요. 브라우저 종료 역시 정상 종료 조건입니다. 사용자 로컬 폴더가 Git 복제가 아닌 다운로드 ZIP이면 git pull은 실패하므로, 먼저 .git 여부를 확인하고 GitHub 최신 main ZIP을 별도 폴더에 압축 해제하세요. 리포트에 0건 차트↔API 후보가 나와도 곧바로 오류는 아닙니다. CSS bar/일반 SVG와 해당 JSON 사이의 자료 흐름은 확인된 근거 없이 연결하지 않습니다.
