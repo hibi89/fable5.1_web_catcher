@@ -1,3 +1,14 @@
+# 2026-10-19 KST — p3 Step 4 공식 SDK HTTP 계약 오프라인 검증 (PR #13)
+
+- **[PR #13](https://github.com/hibi89/fable5.1_web_catcher/pull/13) main 병합** SHA `1339baf0a76e291a8f7fea2698b053cf9351c1a2`, 검증 기능 SHA `42f481c821189e54c3b66b00dff17d767351b376`.
+- 신규 `tests/test_llm_sdk_transport.py`는 실제 설치된 공식 OpenAI Python SDK `OpenAI(...).responses.create`를 **`httpx2.MockTransport`**로 차단하여 외부 네트워크/실제 모델 API 없이 HTTP 요청 JSON 직렬화·`store=false`·strict schema·도구 없음·정제 payload·응답 파싱/usage/401·429·500·거절·잘림을 점검하는 7개 테스트 추가.
+- 최종 [Windows run 39144159568](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39144159568) **98/98 PASS**, [Ubuntu headed Chromium run 39144159553](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39144159553) **23/23 PASS** 및 공개 사이트 smoke **4/4 PASS**.
+- 초기 Chromium [39143751592](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39143751592) 22/23 실패. **1회 재실행 역시 22/23 실패**, 그러나 다른 gzip 응답에서 CDP decoded-length 데이터 미완성으로 `compressed_decoded_unavailable` (본문 미수집 안전 거부). 코드의 명시적 fail-closed 정책이므로 이 가능성을 테스트에 반영. 기능 코드 변경 없음. **CDP 수집 성공률 향상을 달성한 것은 아님**; 원인 진단은 추후 과제.
+- **유료 OpenAI API 0회**, 진짜 모델의 응답 품질/주입 내성/비용 미검증. 이전 Step 1~4 자동·Mock 인수 기준 4/4 단계 유지, 상용 제품 총 % 별도 스코프 미정으로 산출하지 않음.
+- 상세 `docs/STEP4_OFFICIAL_SDK_OFFLINE_2026-10-19.md`; 다음 후보: CDP 관찰 빈도 진단 또는 사용자 Windows 수동 필터 실조작 1회, 실제 유료 API 검증은 명시적 사용자 키/모델과 승인 필요.
+
+---
+
 # 2026-10-19 KST — Step 4 선택적 OpenAI 보고서 Mock 인수 완료
 
 - **PR #12 main 병합 성공**: `0fb2effcf1be3504d323231120cce70d23491d82` (테스트 기능 SHA `3061db1b8fc7706a715975b4fe7e077eb05e3ff9`).
