@@ -98,6 +98,7 @@ def test_real_headed_record_login_navigation_popup_filter_and_excluded_origin(tm
                 stages.add('filter')
                 page.locator('#filter').select_option('b')
                 page.wait_for_timeout(250)
+                print('RECORD_CHART_FIXTURE', page.evaluate('() => ({cls: document.querySelector("svg")?.getAttribute("class"), chartProbe: !!window.__fable51_chart_probe, observer: window.__fable51_chart_probe?.snapshot()})'))
                 return
             if 'popup' not in stages:
                 stages.add('popup')
@@ -124,7 +125,7 @@ def test_real_headed_record_login_navigation_popup_filter_and_excluded_origin(tm
     assert any(urlsplit(row['url']).path == '/api/chart' for row in result['api']['endpoints'])
     assert any(row['response_body_analysis'] == 'scope_or_auth_body_excluded'
                for row in result['api']['endpoints'])
-    assert any(c['library'] == 'Highcharts' for c in result['charts'])
+    assert any(c['library'] == 'Highcharts' for c in result['charts']), result['charts']
     assert all(c['page_id'].startswith('page-') for c in result['charts'])
     assert all('PRIVATE' not in json.dumps(c) for c in result['charts'])
     saved = json.dumps(result, ensure_ascii=False)
