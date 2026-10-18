@@ -21,6 +21,9 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+# Running a script under tools/ does not automatically import repo-root tests/.
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 REVIEW = ROOT / "final_review_dist"
 EXAMPLES = REVIEW / "examples"
 LOGS = REVIEW / "test_logs"
