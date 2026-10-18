@@ -296,7 +296,7 @@ def run_record(url: str, result: dict, *, timeout: float,
                         return
                     docs_count += 1
                     state['navigation_id'] = f'nav-{docs_count:04d}'
-                    state['document_key'] = page_id + ':' + state['navigation_id']
+                    state['document_key'] = page_id + ':' + state['navigation_id'] if docs_count <= MAX_DOCUMENTS else None
                     if len(record['pages']) >= MAX_DOCUMENTS:
                         record['omitted_events']['documents'] += 1
                         return
@@ -372,19 +372,19 @@ def run_record(url: str, result: dict, *, timeout: float,
                     except BrowserError:
                         pass
 
-            reason = ['max_duration']
+            reason[:] = ['max_duration']
             if not fatal:
                 try:
                     while True:
                         if stop.is_set():
-                            reason = [reason[-1] if reason and reason[-1] in ('enter', 'stdin_eof', 'stdin_unavailable') else 'stop_signal']
+                            reason[:] = [reason[-1] if reason and reason[-1] in ('enter', 'stdin_eof', 'stdin_unavailable') else 'stop_signal']
                             break
                         if time.monotonic() - started >= max_duration:
-                            reason = ['max_duration']
+                            reason[:] = ['max_duration']
                             break
                         live = [pg for pg in context.pages if not pg.is_closed()]
                         if not live:
-                            reason = ['browser_closed']
+                            reason[:] = ['browser_closed']
                             break
                         if test_hook is not None:
                             test_hook(context, pages, time.monotonic() - started, stop)
@@ -394,12 +394,12 @@ def run_record(url: str, result: dict, *, timeout: float,
                             live[0].wait_for_timeout(PUMP_MS)
                         except BrowserError:
                             if not [pg for pg in context.pages if not pg.is_closed()]:
-                                reason = ['browser_closed']
+                                reason[:] = ['browser_closed']
                                 break
                 except KeyboardInterrupt:
-                    reason = ['ctrl_c']
+                    reason[:] = ['ctrl_c']
             else:
-                reason = ['navigation_error']
+                reason[:] = ['navigation_error']
 
             snapshot()
             result['charts'] = list(seen[k] for k in seen if isinstance(k, tuple) and len(k) == 3)[:80]
@@ -422,7 +422,7 @@ def run_record(url: str, result: dict, *, timeout: float,
     except KeyboardInterrupt:
         reason = ['ctrl_c']
     except Exception as exc:
-        reason = ['browser_error']
+        reason[:] = ['browser_error']
         fatal = True
         result['warnings'].append('Record 브라우저 처리 실패: ' + type(exc).__name__)
     finally:
