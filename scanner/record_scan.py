@@ -413,26 +413,26 @@ def run_record(url: str, result: dict, *, timeout: float,
         else:
             reason[:] = ['navigation_error']
 
-            snapshot()
-            result['charts'] = list(seen[k] for k in seen if isinstance(k, tuple) and len(k) == 3)[:80]
-            if len([k for k in seen if isinstance(k, tuple) and len(k) == 3]) > 80:
-                record['omitted_events']['documents'] += 1
-                result['warnings'].append('Record 차트 후보 총량 80개 상한 적용')
-            if net:
-                net.finalize()
-                record['omitted_events']['network'] = net.omitted
-                result['runtime']['xhr_fetch_requests_seen'] = net.event_count
-                result['runtime']['xhr_fetch_responses_seen'] = sum(
-                    r['response_received_at_ms'] is not None for r in result['api']['endpoints'])
-            if conn:
-                conn.finalize()
-            if bundles:
-                bundles.finalize(url)
-                for candidate in result['api'].get('candidates', []):
-                    candidate['source_script'] = record_safe_url(candidate['source_script'])
-            map_chart_api_candidates(result)
-            if page and not page.is_closed():
-                result['target']['final_url'] = record_safe_url(page.url)
+        snapshot()
+        result['charts'] = list(seen[k] for k in seen if isinstance(k, tuple) and len(k) == 3)[:80]
+        if len([k for k in seen if isinstance(k, tuple) and len(k) == 3]) > 80:
+            record['omitted_events']['documents'] += 1
+            result['warnings'].append('Record 차트 후보 총량 80개 상한 적용')
+        if net:
+            net.finalize()
+            record['omitted_events']['network'] = net.omitted
+            result['runtime']['xhr_fetch_requests_seen'] = net.event_count
+            result['runtime']['xhr_fetch_responses_seen'] = sum(
+                r['response_received_at_ms'] is not None for r in result['api']['endpoints'])
+        if conn:
+            conn.finalize()
+        if bundles:
+            bundles.finalize(url)
+            for candidate in result['api'].get('candidates', []):
+                candidate['source_script'] = record_safe_url(candidate['source_script'])
+        map_chart_api_candidates(result)
+        if page and not page.is_closed():
+            result['target']['final_url'] = record_safe_url(page.url)
     except KeyboardInterrupt:
         reason = ['ctrl_c']
     except Exception as exc:
