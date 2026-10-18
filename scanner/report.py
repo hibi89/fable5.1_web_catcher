@@ -65,7 +65,7 @@ def to_markdown(result: dict) -> str:
             f"- 스크롤: {runtime.get('scroll_steps', 0)}회",
             f"- XHR/fetch 요청 관찰 수: {runtime.get('xhr_fetch_requests_seen', 0)}",
             f"- XHR/fetch 응답 관찰 수: {runtime.get('xhr_fetch_responses_seen', 0)}",
-            "- 알려진 차트 라이브러리 전역/DOM 후보만 탐지합니다. 차트↔API 연관·번들 문자열 분석은 아직 미구현입니다.", "",
+            "- 차트↔API는 연관 후보만 제시하며 JS 문자열 후보는 미검증 상태로 분리합니다. 실제 데이터 연결은 확인할 수 없습니다.", "",
         ]
         mapping = runtime.get("mapping_analysis", {})
         guesses = result["api"]["candidates"]
