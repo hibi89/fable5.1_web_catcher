@@ -47,6 +47,8 @@ def main():
     after = Counter()
     real_decide = DecodedLengthTracker.decide
     real_clear = DecodedLengthTracker.clear
+    real_attach = DecodedLengthTracker.attach_page
+    request_event_classes = Counter()
 
     def decide(self, req):
         before[snapshot_category(self, req)] += 1
@@ -70,8 +72,58 @@ def main():
                         at_clear["complete_within_cap"] += 1
         return real_clear(self)
 
+    def attach_page(self, context, page):
+        result = real_attach(self, context, page)
+        if not result:
+            request_event_classes["attach_failed"] += 1
+            return result
+        session = self._sessions[-1]
+        try:
+            frame = session.send("Page.getFrameTree")["frameTree"]["frame"]["id"]
+        except Exception:
+            request_event_classes["frame_tree_error"] += 1
+            return result
+        tracked_ids = set()
+
+        def received_request(evt):
+            info = evt.get("request") or {}
+            url = info.get("url")
+            method = info.get("method")
+            if not isinstance(url, str) or not self.allow_url(url):
+                return
+            if url.rsplit("/", 1)[-1] not in ("gz-small", "gz-large"):
+                return
+            request_event_classes["allowed_target_request_event"] += 1
+            if evt.get("frameId") == frame:
+                request_event_classes["main_frame_id_match"] += 1
+            else:
+                request_event_classes["main_frame_id_mismatch"] += 1
+            if evt.get("type") in ("Fetch", "XHR"):
+                request_event_classes["resource_type_fetch_or_xhr"] += 1
+            key = (url, method)
+            if self._by_page.get(page, {}).get(key):
+                request_event_classes["registered_in_tracker"] += 1
+            else:
+                request_event_classes["not_registered_by_tracker"] += 1
+            if evt.get("requestId"):
+                tracked_ids.add(evt["requestId"])
+
+        def received_data(evt):
+            if evt.get("requestId") in tracked_ids:
+                request_event_classes["data_event_for_allowed_target"] += 1
+
+        def received_finish(evt):
+            if evt.get("requestId") in tracked_ids:
+                request_event_classes["finish_event_for_allowed_target"] += 1
+
+        session.on("Network.requestWillBeSent", received_request)
+        session.on("Network.dataReceived", received_data)
+        session.on("Network.loadingFinished", received_finish)
+        return result
+
     with patch.object(DecodedLengthTracker, "decide", decide), patch.object(
-            DecodedLengthTracker, "clear", clear):
+            DecodedLengthTracker, "clear", clear), patch.object(
+            DecodedLengthTracker, "attach_page", attach_page):
         for delay_ms in (0, 500):
             for endpoint in ("/gz-small", "/gz-large"):
                 for repeat in range(2):
@@ -114,6 +166,7 @@ def main():
     print("P3_CDP_DIAGNOSTIC_OUTCOME", repr({
         str(k): v for k, v in sorted(after.items(), key=lambda kv: str(kv[0]))
     }), flush=True)
+    print("P3_CDP_DIAGNOSTIC_REQUEST_EVENTS", repr(dict(sorted(request_event_classes.items()))), flush=True)
     assert sum(after.values()) == 8
     assert after["browser_error"] == 0
     assert after["endpoint_count_mismatch"] == 0
