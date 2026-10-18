@@ -81,7 +81,8 @@ def allowed_origins(url: str, extra: list[str] | None) -> set[str]:
     origins = {base}
     for raw in extra or []:
         parsed = urlsplit(raw)
-        if (parsed.username or parsed.password or parsed.path not in ('', '/')
+        if (parsed.username or parsed.password or '*' in (parsed.hostname or '')
+                or parsed.path not in ('', '/')
                 or parsed.query or parsed.fragment or origin_string(raw) is None):
             raise ValueError('--allow-origin은 경로·쿼리 없는 정확한 HTTP/HTTPS origin만 허용합니다.')
         origins.add(origin_string(raw))
@@ -342,6 +343,14 @@ def run_record(url: str, result: dict, *, timeout: float,
                         for item in local['runtime'].get('technologies', []):
                             if not any(t['name'] == item['name'] for t in result['runtime']['technologies']):
                                 result['runtime']['technologies'].append(item)
+                                eid = f"record-tech-{len(result['evidence'])+1:04d}"
+                                result['evidence'].append({
+                                    'id': eid, 'source': 'runtime_global',
+                                    'key': item['name'], 'value': item['evidence'],
+                                    'note': '허용 범위의 런타임 기술 마커 (차트 사용 확정 아님)'})
+                                result['frontend'].append({
+                                    'name': item['name'], 'version': item.get('version'),
+                                    'confidence': 0.8, 'evidence_ids': [eid]})
                     except BrowserError:
                         pass
                     try:
