@@ -10,21 +10,23 @@
 
 ## 3. 테스트 명령·성공/실패 수·검증/미검증
 
-- `python -m pytest -q` (Python 3.13.5) → **22 passed** (2026-10-18 KST). 추후 변경 시 재실행.
-- 새 격리 `.venv`: 네트워크와 wheel 미제공으로 pip 설치 **실패**, 런타임 코드 실패로 판단하지 말 것.
-- 미검증: 실제 인터넷 사이트, Windows/macOS, Python 3.11, 네트워크별 보안 프록시, 새 가상환경 설치.
+- 컨테이너 Python 3.13.5 `python -m pytest -q` → **22/22 PASS** (2026-10-18 KST, 오프라인 fixture).
+- 사용자 제공 Windows Python 3.11 `(.venv)` 기록: 첫 실행 **19 PASS / 3 FAIL** (UTF-8 파일을 기본 cp949로 읽는 테스트 오류) → `tests/test_static.py` `read_text(encoding="utf-8")` 수정 후 **22 PASS / 0 FAIL / 5.17초**.
+- Windows `python scan.py https://example.com --out ./out/demo` 정상 종료 및 결과 파일 생성 경로 출력 확인.
+- 컨테이너의 새 격리 `.venv`: DNS/wheel 미제공으로 pip 설치 **실패**. 사용자 Windows 환경에서는 활성 가상환경의 CLI 및 pytest 실행 확인. 단 새 가상환경의 `pip install -r requirements.txt` 전체 과정을 기록으로 직접 확인한 것은 아님.
+- 미검증: macOS/Linux, 공개 URL 다수의 실제 결과, 네트워크별 보안 프록시, 새 가상환경 생성부터 설치까지의 재현성.
 
 ## 4. 완료/진행/대기/차단·중단 지점
 
-로컬 Step 1 구현/fixture 테스트 완료. 독립 가상환경 설치 검증 대기. GitHub 대상 저장소는 이 시점에서 빈 상태로, 로컬 전체 소스 커밋 미반영.
+Step 1 CLI·오프라인 fixture 구현 및 Windows Python 3.11 테스트 22/22 통과. **GitHub `main`에 소스 최초 반영 확인**. 독립 새 가상환경 설치 전 과정과 다른 운영체제, 다수 실제 사이트 테스트는 검증 대기. Step 2는 미착수.
 
 ## 5. 오류 근거·원인·시도·재시도 금지·대안
 
-`python -m venv .venv` 다음 `pip install --no-index -r requirements.txt`: requests 패키지 wheel 없음. `venv --system-site-packages`에서도 bs4/pytest 미노출. 이 환경의 패키지 저장소가 없고 외부 DNS 접근이 불가함. 동일 오프라인 설치 무의미 반복 금지; 인터넷 사용 가능한 사용자 환경에서 표준 pip 설치 권고.
+컨테이너에서 `pip install --no-index -r requirements.txt`는 wheel 없음, `venv --system-site-packages`에서도 bs4/pytest 미노출, 외부 DNS 불가. 동일 방식 재시도 금지. Windows 테스트 최초 3건 실패는 `pathlib.read_text()` 기본 cp949와 저장된 UTF-8 JSON/Markdown 사이의 불일치였으며, 명시적 UTF-8 읽기 설정으로 수정 확인. 사용자 Windows 활성 `.venv`에서 22/22 PASS를 확인했으나 새 venv 생성·설치 과정은 미기록.
 
 ## 6. 저장소·브랜치·SHA·주요 경로
 
-`hibi89/fable5.1_web_catcher`, `main`. GitHub 소스 커밋 SHA 없음(미반영). 경로: `scan.py`, `scanner/`, `rules/`, `tests/`, `README.md`.
+`hibi89/fable5.1_web_catcher`, `main`. 최초 GitHub 소스 커밋: `cbef84bd388f8b619d2d388bf6cf5a87c617ca45` (2026-10-18 17:03:47 KST); 상태 문서 갱신 커밋: `c4e79c779d72e642b96ff95d8a49b2a646e689a9`. 경로: `scan.py`, `scanner/`, `rules/`, `tests/`, `README.md`, `STATUS.md`, `HANDOFF.md`. 최초 커밋에서 `tests/test_static.py.bak`도 확인(임의 삭제 금지).
 
 ## 7. Production URL·Vercel·실행 명령·환경
 
@@ -32,14 +34,15 @@
 
 ## 8. 원본·백업·인증 관리·수정 금지
 
-확정 원본: 현재 대화에 첨부된 `fable5.1_step1.txt`. GitHub 빈 저장소였으므로 기존 코드 수정 없음. 출력에 쿠키값/Authorization/토큰 저장 금지, `.env` 포함하지 않음.
+확정 원본: 대화 첨부 `fable5.1_step1.txt`. 원본 ZIP과 Windows 수정 전 테스트 백업은 사용자가 보관. 이제 GitHub `main`이 소스 단일 기준. 토큰/인증/쿠키 값과 `.env`를 GitHub에 등록하거나 출력하지 말 것. 첫 커밋에 `tests/test_static.py.bak`가 함께 포함됐음(비밀정보 유무 별도 감사 미수행).
 
 ## 9. 다음 작업 우선순위·절차·완료 기준·승인 사항
 
-1. GitHub API와 연결된 실행 환경에서 ZIP 소스 업로드, 커밋 검증 및 중앙 BOOK 기록 확인.
-2. 인터넷 가능한 독립 새 가상환경에서 `pip install -r requirements.txt`, `python -m pytest -q`, fixture CLI 재검증.
-3. 필요 시 Step 2 동적 브라우저 수집은 범위·비용·설계를 승인받은 뒤 별도 구현.
+1. **완료:** GitHub `main` 최초 소스 커밋 및 Windows 가상환경 22/22 PASS 검증; 문서·BOOK 동기화.
+2. **선택 검증:** 새 Windows 가상환경 생성 → `pip install -r requirements.txt` → pytest 및 fixture CLI 실행; 외부 URL 결과는 구조만 검증(기술 명칭 강제 금지).
+3. **선택 정리:** 백업 `tests/test_static.py.bak` 추적 제외 필요성 확인 후 사용자 승인 시 정리.
+4. **승인 대기:** Step 2 Playwright/동적 분석 확장(범위·유지비용·방법 비교 뒤 진행).
 
 ## 10. 갱신 일시·확인 시점·검증 범위·문서 기준 커밋
 
-2026-10-18 KST. 검증 범위: 컨테이너의 로컬 테스트 및 파일. 문서 기준 커밋: 미반영.
+2026-10-18 17:04 KST. 검증 범위: GitHub `main` 파일/최초 커밋/작성자·커미터 메타데이터, 사용자 Windows PowerShell 출력, 앞선 컨테이너 오프라인 테스트. 문서 기준 소스 커밋: `cbef84bd388f8b619d2d388bf6cf5a87c617ca45`. Vercel/Production 해당 없음.
