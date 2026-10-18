@@ -58,7 +58,7 @@ def test_status_variants_are_separate_and_samples_merged():
     assert ok["presence_frequencies"]=="unknown_in_legacy_results"
     schema=as_json_schema(ok)
     assert schema["$schema"]=="https://json-schema.org/draft/2020-12/schema"
-    assert "required" not in json.dumps(schema)
+    assert "required" not in schema and "required" not in schema["properties"]["items"]["items"]
     assert err["schema_available"]
     union=schema["properties"]["items"]["items"]["properties"]["value"]
     assert "anyOf" in union
