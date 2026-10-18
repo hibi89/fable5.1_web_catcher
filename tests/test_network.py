@@ -122,7 +122,7 @@ def test_bounded_request_list_and_mime_graphql():
 
 def test_missing_content_length_uses_finished_measured_bytes_only():
     result = blank_result('https://example.test')
-    collector = NetworkCollector(result)
+    collector = NetworkCollector(result, allow_unknown_length=True)
     body = json.dumps({'points': [{'date': 'SENSITIVE_DATE',
                                     'value': 14, 'token': 'SENSITIVE_TOKEN'}]}).encode()
     req = FakeRequest('https://example.test/api/chunked?key=PRIVATE',
@@ -155,7 +155,7 @@ def test_missing_length_rejects_large_compressed_or_unmeasurable_body_without_re
         (None, None, False, 'size_unknown'),
     ]:
         data = blank_result('https://example.test')
-        c = NetworkCollector(data)
+        c = NetworkCollector(data, allow_unknown_length=True)
         req = FakeRequest('https://example.test/api/test',
                           transfer_bytes=transfer_bytes, size_error=size_error)
         response = FakeResponse(req, b'{"password":"SENSITIVE"}', encoding=encoding)
