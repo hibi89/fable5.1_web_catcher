@@ -7,6 +7,10 @@ from __future__ import annotations
 
 import json
 import threading
+import time
+import subprocess
+import sys
+from pathlib import Path
 from contextlib import contextmanager
 from http.server import ThreadingHTTPServer
 from threading import Thread
@@ -48,6 +52,9 @@ class RecordHandler(FixtureHandler):
                 setTimeout(()=>{c.setAttribute('class','highcharts-root');c.setAttribute('viewBox','0 0 250 150');},60));
             </script></body></html>"""
             return self._dynamic_response(body, 'text/html')
+        if path == '/api/slow':
+            time.sleep(2.0)
+            return self._dynamic_response(b'{"items":[{"date":"PRIVATE_DATE","value":5}]}', 'application/json')
         if path == '/popup':
             body = b"<html><body><script>fetch('/api/popup?token=POP_PRIVATE')</script></body></html>"
             return self._dynamic_response(body, 'text/html')
@@ -98,11 +105,6 @@ def test_real_headed_record_login_navigation_popup_filter_and_excluded_origin(tm
                 stages.add('filter')
                 page.locator('#filter').select_option('b')
                 page.wait_for_timeout(250)
-                print('RECORD_CHART_FIXTURE', page.evaluate('() => ({cls: document.querySelector("svg")?.getAttribute("class"), chartProbe: !!window.__fable51_chart_probe, observer: window.__fable51_chart_probe?.snapshot()})'))
-                from scanner.runtime_detect import collect_runtime_charts
-                temp = {'charts': [], 'runtime': {}, 'frontend': [], 'evidence': []}
-                collect_runtime_charts(page, temp)
-                print('RECORD_NORMALIZED_CHARTS', temp['charts'])
                 return
             if 'popup' not in stages:
                 stages.add('popup')
@@ -124,6 +126,7 @@ def test_real_headed_record_login_navigation_popup_filter_and_excluded_origin(tm
     assert len(record['pages']) >= 3, record['pages']
     assert any(not p['allowed'] for p in record['pages'])
     assert any(i['type'] == 'change' for i in record['interactions'])
+    assert any(i['type'] == 'click' for i in record['interactions'])
     assert all(i['page_id'].startswith('page-') for i in record['interactions'])
     assert len({(p['page_id'], p['navigation_id']) for p in record['pages']}) == len(record['pages'])
     assert any(urlsplit(row['url']).path == '/api/chart' for row in result['api']['endpoints'])
@@ -155,3 +158,56 @@ def test_real_headed_record_time_limit_and_browser_closed(tmp_path):
         assert run_record(url+'/record', data2, timeout=5, max_duration=10,
                           stop_event=threading.Event(), test_hook=hook) is False
         assert data2['record']['stop_reason'] == 'browser_closed'
+
+
+def test_real_headed_record_enter_creates_reports_via_cli(tmp_path):
+    root = Path(__file__).resolve().parents[1]
+    output = tmp_path / 'enter-cli'
+    with serve_record() as url:
+        finished = subprocess.run(
+            [sys.executable, '-u', str(root / 'scan.py'), url + '/record',
+             '--record', '--runtime', '--max-duration', '10', '--out', str(output)],
+            input='\n', capture_output=True, text=True, timeout=25, cwd=root)
+    assert finished.returncode == 0, finished.stdout + finished.stderr
+    data = json.loads((output / 'result.json').read_text(encoding='utf-8'))
+    report = (output / 'report.md').read_text(encoding='utf-8')
+    assert data['scan_mode'] == 'record'
+    assert data['record']['stop_reason'] == 'enter'
+    assert data['record']['record_ended_at']
+    assert 'Record 수집 구간 및 범위' in report
+    assert 'LOGIN_VALUE_PRIVATE' not in report
+
+
+def test_real_headed_record_ctrlc_signal_and_inflight_response_limit(monkeypatch):
+    import scanner.record_scan as record_mod
+    with serve_record() as url:
+        data = blank_result(url)
+        def interrupt(context, states, elapsed, stop):
+            raise KeyboardInterrupt()
+        assert run_record(url+'/record', data, timeout=5, max_duration=10,
+                          stop_event=threading.Event(), test_hook=interrupt) is False
+        assert data['record']['stop_reason'] == 'ctrl_c'
+
+        monkeypatch.setattr(record_mod, 'MAX_DETAIL', 2)
+        limited = blank_result(url)
+        states = set()
+        start = time.monotonic()
+        def issue_many(context, pages, elapsed, stop):
+            if not states:
+                states.add('sent')
+                page = context.pages[0]
+                page.evaluate("""() => {
+                  fetch('/api/slow?token=INFLIGHT_PRIVATE');
+                  for(let i=0;i<8;i++) fetch('/api/chart?token=OVERFLOW_PRIVATE&n='+i);
+                }""")
+                page.wait_for_timeout(400)
+                stop.set()
+        assert run_record(url+'/record', limited, timeout=5, max_duration=10,
+                          stop_event=threading.Event(), test_hook=issue_many) is False
+        assert time.monotonic() - start < 9
+        assert limited['record']['omitted_events']['network'] >= 5
+        assert len(limited['api']['endpoints']) <= 2
+        assert any('상한' in warning or '미수집' in warning for warning in limited['warnings'])
+        dumped = json.dumps(limited, ensure_ascii=False)
+        assert 'INFLIGHT_PRIVATE' not in dumped
+        assert 'OVERFLOW_PRIVATE' not in dumped
