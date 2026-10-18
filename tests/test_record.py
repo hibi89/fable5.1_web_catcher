@@ -51,3 +51,53 @@ def test_record_mappings_require_same_document_and_do_not_infer_causality():
     link = data['api']['chart_candidates'][0]
     assert 'preceding_manual_interaction_marker' in link['reasons']
     assert 'interaction_does_not_prove_causality' in link['limitations']
+
+
+def test_generic_chart_change_reason_allowlist_never_preserves_raw_attributes():
+    from scanner.runtime_detect import normalize_probe
+
+    snapshot = {'charts': [
+        {'library': 'unknown', 'library_evidence': ['generic_svg'],
+         'selector': 'svg:nth-of-type(1)', 'first_seen_ms': 111,
+         'last_observed_update_ms': 333, 'change_evidence': 'svg_geometry_changed',
+         'raw_path': 'M 0 0 L SECRET_PATH',
+         'detection_confidence': 0.2},
+        {'library': 'unknown', 'library_evidence': ['css_bar_group_pattern'],
+         'selector': 'section:nth-of-type(1)', 'first_seen_ms': 111,
+         'last_observed_update_ms': 444, 'change_evidence': 'css_bar_geometry_changed',
+         'inline_width': 'SENSITIVE_BAR_WIDTH',
+         'detection_confidence': 0.5},
+        {'library': 'unknown', 'library_evidence': ['generic_svg'],
+         'selector': 'svg:nth-of-type(2)', 'first_seen_ms': 111,
+         'last_observed_update_ms': 555, 'change_evidence': 'SENSITIVE_FAKE_REASON'},
+    ]}
+    charts, _, _ = normalize_probe(snapshot, [])
+    assert [c['change_evidence'] for c in charts] == [
+        'svg_geometry_changed', 'css_bar_geometry_changed', None]
+    assert charts[1]['detection_level'] == 'css_bar_pattern_candidate'
+    import json
+    saved = json.dumps(charts)
+    for value in ('SECRET_PATH', 'SENSITIVE_BAR_WIDTH', 'SENSITIVE_FAKE_REASON'):
+        assert value not in saved
+
+
+def test_generic_chart_change_does_not_claim_api_lineage():
+    from scanner.chart_mapping import map_chart_api_candidates
+
+    chart = {
+        'id': 'generic-svg', 'library': 'unknown',
+        'detection_level': 'generic_markup_candidate',
+        'last_observed_update_ms': 2000,
+        'change_evidence': 'svg_geometry_changed',
+        'library_evidence': ['generic_svg'], 'data_sources': [],
+        'page_id': 'page-001', 'navigation_id': 'nav-0001'}
+    api = {
+        'id': 'api-0001', 'page_id': 'page-001', 'navigation_id': 'nav-0001',
+        'request_started_at_ms': 1400, 'response_received_at_ms': 1600,
+        'status': 200, 'response_body_analysis': 'structure_only',
+        'json_structure': {'items': [{'date': 'string', 'value': 'number'}]}}
+    data = {'scan_mode': 'record', 'charts': [chart],
+            'api': {'endpoints': [api]}, 'runtime': {}, 'record': {'interactions': []}}
+    map_chart_api_candidates(data)
+    assert data['api']['chart_candidates'] == []
+    assert chart['data_sources'] == []
