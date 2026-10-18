@@ -51,8 +51,11 @@ INTERACTION_SCRIPT = r"""
     if (!el || !el.localName) return;
     if (el.localName.toLowerCase()==='input' && el.type==='password') return;
     if (data.length>=MAX) { dropped++; return; }
-    data.push({type:event.type, at_ms:now(),
-      tag:el.localName.toLowerCase(), selector:selector(el)});
+    const item = {seq:data.length+1, type:event.type, at_ms:now(),
+      tag:el.localName.toLowerCase(), selector:selector(el)};
+    data.push(item);
+    try { if (typeof window.__fable51_record_marker === 'function')
+      void window.__fable51_record_marker(item); } catch (_) {}
   }
   document.addEventListener('click', marker, true);
   document.addEventListener('change', marker, true);
@@ -261,6 +264,7 @@ def run_record(url: str, result: dict, *, timeout: float,
     browser = context = None
     playwright_instance = None
     seen = {}
+    marker_keys = set()
     docs_count = 0
     has_iframe_warning = False
     try:
@@ -275,6 +279,46 @@ def run_record(url: str, result: dict, *, timeout: float,
         p = playwright_instance
         browser = p.chromium.launch(headless=False)
         context = browser.new_context(accept_downloads=False, ignore_https_errors=False)
+        def add_marker(marker, state):
+            if not isinstance(marker, dict):
+                return
+            seq, stamp = marker.get('seq'), marker.get('at_ms')
+            tag, selector = marker.get('tag'), marker.get('selector')
+            if (type(seq) is not int or seq <= 0 or seq > MAX_INTERACTIONS
+                    or type(stamp) is not int or stamp <= 0
+                    or marker.get('type') not in ('click', 'change')
+                    or not isinstance(tag, str)
+                    or not re.fullmatch(r'[a-z][a-z0-9-]{0,30}', tag)
+                    or not isinstance(selector, str)
+                    or not re.fullmatch(r'[a-z0-9> ():nth-of-type.\-]{1,250}', selector)):
+                return
+            ident = (state['page_id'], state['navigation_id'], seq)
+            if ident in marker_keys:
+                return
+            # Keep the dedupe index and persisted markers bounded together.
+            if len(record['interactions']) >= MAX_INTERACTIONS:
+                record['omitted_events']['interactions'] += 1
+                return
+            marker_keys.add(ident)
+            record['interactions'].append({
+                'type': marker['type'], 'at_ms': stamp,
+                'tag': tag, 'selector': selector,
+                'page_id': state['page_id'],
+                'navigation_id': state['navigation_id']})
+
+        def on_marker(source, marker):
+            try:
+                pg, frame = source['page'], source['frame']
+                state = pages.get(pg)
+                if (state and frame == pg.main_frame
+                        and origin_string(frame.url) in origins
+                        and state['document_key'] is not None):
+                    add_marker(marker, state)
+            except Exception:
+                # Site events must not disrupt user browsing.
+                pass
+
+        context.expose_binding('__fable51_record_marker', on_marker)
         context.add_init_script(_guarded(CHART_OBSERVER_SCRIPT, origins))
         context.add_init_script(_guarded(INTERACTION_SCRIPT, origins))
         net = ScopedNetworkCollector(result, origins, pages)
@@ -364,18 +408,7 @@ def run_record(url: str, result: dict, *, timeout: float,
                         cursor_key = (key, 'interaction_cursor')
                         previous = seen.get(cursor_key, 0)
                         for marker in items[previous:]:
-                            if len(record['interactions']) >= MAX_INTERACTIONS:
-                                record['omitted_events']['interactions'] += 1
-                                continue
-                            if (marker.get('type') not in ('click', 'change')
-                                    or not re.fullmatch(r'[a-z][a-z0-9-]{0,30}', str(marker.get('tag', '')))
-                                    or not re.fullmatch(r'[a-z0-9> ():nth-of-type.\-]{1,250}', str(marker.get('selector', '')))):
-                                continue
-                            record['interactions'].append({
-                                'type': marker['type'], 'at_ms': marker.get('at_ms'),
-                                'tag': marker['tag'], 'selector': marker['selector'],
-                                'page_id': state['page_id'],
-                                'navigation_id': state['navigation_id']})
+                            add_marker(marker, state)
                         seen[cursor_key] = len(items)
                         dropped_key = (key, 'interaction_dropped')
                         dropped = int(value.get('dropped') or 0)
