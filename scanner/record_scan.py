@@ -126,7 +126,7 @@ class ScopedNetworkCollector(NetworkCollector):
     """Reuse Step 2's event collector, restricting JSON bodies to permitted origins."""
 
     def __init__(self, result, origins, pages):
-        super().__init__(result)
+        super().__init__(result, allow_unknown_length=True)
         self.origins = origins
         self.pages = pages
         self.event_count = 0
