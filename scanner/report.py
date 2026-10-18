@@ -55,7 +55,7 @@ def to_markdown(result: dict) -> str:
             elif line.startswith("- 정적 GET 1페이지"):
                 lines[i] = "- 격리 브라우저로 페이지만 열고 제한적으로 스크롤했습니다. 로그인·클릭·폼 제출은 하지 않았습니다."
             elif line.startswith("- Step 1의 API"):
-                lines[i] = "- Step 2 단위 4에서 런타임 기술과 차트 DOM 후보를 수집하지만 차트↔API 연결은 아직 추정하지 않습니다."
+                lines[i] = "- Step 2 단위 5에서 근거 기반 차트↔API 연관 후보만 추정합니다. 실제 데이터 흐름은 확인할 수 없습니다."
         runtime = result.get("runtime", {})
         index = lines.index("## 한계 및 주의")
         lines[index:index] = [
