@@ -290,7 +290,7 @@ def run_record(url: str, result: dict, *, timeout: float,
                 return
             page_id = f'page-{len(pages)+1:03d}'
             state = {'page_id': page_id, 'navigation_id': 'nav-000',
-                     'frame_id': 'main', 'document_key': None}
+                     'frame_id': page_id + '-main', 'document_key': None}
             pages[page] = state
             conn.attach_page(page)
             def navigated(frame):
@@ -305,7 +305,7 @@ def run_record(url: str, result: dict, *, timeout: float,
                     return
                 record['pages'].append({
                     'page_id': page_id, 'navigation_id': state['navigation_id'],
-                    'frame_id': 'main', 'url': record_safe_url(frame.url),
+                    'frame_id': state['frame_id'], 'url': record_safe_url(frame.url),
                     'allowed': origin_string(frame.url) in origins})
             page.on('framenavigated', navigated)
         context.on('page', on_page)
@@ -340,7 +340,7 @@ def run_record(url: str, result: dict, *, timeout: float,
                     for c in local['charts']:
                         c['id'] = state['page_id'] + '-' + state['navigation_id'] + '-' + c['id']
                         c.update(page_id=state['page_id'], navigation_id=state['navigation_id'],
-                                 frame_id='main')
+                                 frame_id=state['frame_id'])
                         seen[(key, c['selector'], c['library'])] = c
                     for item in local['runtime'].get('technologies', []):
                         if not any(t['name'] == item['name'] for t in result['runtime']['technologies']):
@@ -408,9 +408,9 @@ def run_record(url: str, result: dict, *, timeout: float,
                             reason[:] = ['browser_closed']
                             break
             except KeyboardInterrupt:
-                    reason[:] = ['ctrl_c']
-            else:
-                reason[:] = ['navigation_error']
+                reason[:] = ['ctrl_c']
+        else:
+            reason[:] = ['navigation_error']
 
             snapshot()
             result['charts'] = list(seen[k] for k in seen if isinstance(k, tuple) and len(k) == 3)[:80]
@@ -427,6 +427,8 @@ def run_record(url: str, result: dict, *, timeout: float,
                 conn.finalize()
             if bundles:
                 bundles.finalize(url)
+                for candidate in result['api'].get('candidates', []):
+                    candidate['source_script'] = record_safe_url(candidate['source_script'])
             map_chart_api_candidates(result)
             if page and not page.is_closed():
                 result['target']['final_url'] = record_safe_url(page.url)
