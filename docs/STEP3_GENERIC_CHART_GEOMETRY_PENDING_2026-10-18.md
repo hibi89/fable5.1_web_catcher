@@ -1,3 +1,18 @@
+# 후속 검증 확정 — PR #4 병합 완료 (2026-10-18 KST)
+
+**이 문서의 과거 'CI 차단/병합 대기' 설명은 해결 전 기록이다. 최신 최종 판정은 아래와 같다.**
+
+- GitHub 저장소를 Public으로 전환한 뒤 이전 사용량 제한으로 작업 단계 0개에서 실패했던 workflow를 재실행하여 정상 실행됨.
+- 최초 재실행 결과 Windows 65/65 PASS, Chromium 20 PASS/1 FAIL. 실패는 새 fixture의 `chart_candidates` 키 필수 존재 가정(해당 API 연결 후보가 없으면 이 필드는 생략될 수 있음)이었으며, 실제 SVG/CSS 감지는 통과.
+- `tests/browser_record_check.py`에서 키 생략을 허용하도록 기대값을 `result['api'].get('chart_candidates', []) == []`로 수정. 기능 로직에는 추가 변경 없음.
+- **최종 검증 소스 SHA `30a59be00d473a1040d67aa0d3166f41b70f5e70`에서 성공**:
+  - Windows Python 3.11 workflow [39136596883](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39136596883) — **65/65 PASS**
+  - Ubuntu 실제 headed Chromium workflow [39136596876](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39136596876) — **21/21 PASS**, 보조 공개 사이트 smoke **4/4 PASS**
+- [PR #4](https://github.com/hibi89/fable5.1_web_catcher/pull/4) **main 병합 완료**, merge SHA `67e72529be4d5e6a190d7c63fc0c840878301965`. 사용자 로컬 PC 및 실제 대상 사이트에서 이 신규 코드의 그래프 변화 탐지는 아직 재확인되지 않았다.
+- SVG/CSS DOM 기하 변화는 '업데이트 관찰 증거'이며, 어떤 외부 API가 차트를 움직였는지 증명하지 않는다. 기존 보수적 `chart_mapping` 정책은 유지한다.
+
+---
+
 # Step 3 generic SVG/CSS 상태 변화 감지 보강 — PR #4 검증 대기
 
 ## 목적
