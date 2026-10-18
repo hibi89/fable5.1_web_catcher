@@ -1,0 +1,34 @@
+name: macOS Python 3.11 one-time verification
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/macos-python311.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  macos-py311:
+    name: Fresh macOS Python 3.11 fixture tests
+    runs-on: macos-15
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+
+      - name: Create isolated virtual environment
+        run: python -m venv .venv-ci
+
+      - name: Install requirements
+        run: .venv-ci/bin/python -m pip install --disable-pip-version-check -r requirements.txt
+
+      - name: Run offline fixture regression tests
+        run: .venv-ci/bin/python -m pytest -q
