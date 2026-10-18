@@ -145,11 +145,11 @@ SSE, WebSocket, API/차트 수집 및 서버 측 SSRF 격리는 향후 단위의
 
 ## Step 2 — 단위 2: 관찰된 XHR/fetch 메타데이터
 
-\`--runtime\`은 이제 브라우저 탐색 전 요청/응답 이벤트 리스너를 설치하고,
-페이지가 **실제로 요청한** fetch/XHR만 \`api.endpoints\`에 기록합니다.
-요청별 \`id\`, 마스킹된 \`url\`, \`method\`, \`resource_type\`,
-\`request_started_at_ms\`, \`response_received_at_ms\`, \`status\`,
-\`content_type\`, \`graphql_candidate\`, \`json_structure\`, \`response_body_analysis\`을 저장합니다.
+`--runtime`은 이제 브라우저 탐색 전 요청/응답 이벤트 리스너를 설치하고,
+페이지가 **실제로 요청한** fetch/XHR만 `api.endpoints`에 기록합니다.
+요청별 `id`, 마스킹된 `url`, `method`, `resource_type`,
+`request_started_at_ms`, `response_received_at_ms`, `status`,
+`content_type`, `graphql_candidate`, `json_structure`, `response_body_analysis`을 저장합니다.
 GraphQL은 관찰된 URL 경로나 콘텐츠 유형에 근거한 **후보**일 뿐 자동 introspection하지 않습니다.
 
 JSON 본문은 값·원문을 저장하지 않고 필드 이름/자료형만 요약합니다.
@@ -162,8 +162,8 @@ JSON 중첩 5단계, 객체 키 24개, 배열 표본 3개로 제한합니다.
 발생할 수 있으며 **완전한 메모리 상한은 보장되지 않습니다**.
 브라우저에서 응답 완료 후 body를 읽기 때문에 끝나지 않는 스트림은 읽지 않습니다.
 
-오프라인 단위 테스트: \`python -m pytest -q tests/test_network.py\`
-(일반 전체: \`python -m pytest -q\`).
-실제 Chromium fixture: \`python -m pytest -q tests/browser_runtime_check.py\`.
-\`api.candidates\`, \`api.connections\`, \`charts\`는 아직 비어 있습니다.
+오프라인 단위 테스트: `python -m pytest -q tests/test_network.py`
+(일반 전체: `python -m pytest -q`).
+실제 Chromium fixture: `python -m pytest -q tests/browser_runtime_check.py`.
+`api.candidates`, `api.connections`, `charts`는 아직 비어 있습니다.
 WebSocket·SSE, 차트 라이브러리, 차트↔API 연관 후보, JS 번들 분석은 미구현입니다.
