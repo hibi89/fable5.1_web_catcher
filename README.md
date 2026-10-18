@@ -293,3 +293,9 @@ python scan.py "https://daily-dashboard-ldh-1013.clevertide128.chatgpt.site/#v-d
 Playwright `--record`로 수동 탐색 시 승인한 정확한 `--allow-origin`의 JSON 응답에 `Content-Length`가 없고 `gzip`/`br` 압축돼 있으면, CDP에서 관찰한 압축 **해제 후 바이트 수**가 128KiB 이하인 경우에만 기존 값 없는 필드/타입 구조 분석을 수행합니다. 실제 body를 읽은 후에도 측정 길이·상한을 검증합니다. 128KiB 초과, 불완전한 CDP 데이터, 중복 요청 등은 본문을 읽지 않고 수집 제한 사유를 기록합니다.
 
 이 기능은 Step 3에만 적용하며 Step 1/2 원래 정책은 유지됩니다. Chrome 자체에서 웹페이지의 모든 압축 응답을 메모리에 해제하는 현상을 막는 절대 메모리 제한 기능은 아닙니다. 특정 실제 데모사이트의 API는 디코딩 크기가 128KiB 초과하여 현재 `decoded_too_large`이고, 본문 구조 미수집이 정상입니다. 상세 근거 `docs/STEP3_COMPRESSED_JSON_DECODED_BOUND_2026-10-18.md`.
+
+## Step 3: 128KiB 초과 JSON의 제한된 부분 구조 힌트
+
+승인된 `--record` XHR/fetch JSON 응답의 디코딩 전체 크기가 128KiB를 초과하면 전체 본문을 분석하지 않는 기존 정책을 유지합니다. 대신 Chromium CDP로 수신 시점의 첫 **최대 32KiB**를 일시적으로 관찰하고 그 안에 **완전하게 닫힌 첫 JSON 객체**가 있으면 키 이름과 타입만 `json_prefix_structure`에 기록합니다. `completeness=partial_prefix_only`이므로 전체 JSON 스키마나 차트/API의 인과 관계를 증명하지 않습니다. 응답 본문 값은 저장하지 않고, 로그에 실제 필드명을 출력하지 않습니다. 최대 20개 스트림/10개 부분 힌트 상한이 적용됩니다. CDP의 브라우저 내부 메모리를 절대 제한하는 기능은 아닙니다.
+
+관련 근거와 테스트: `docs/STEP3_PARTIAL_LARGE_JSON_PREFIX_2026-10-19.md`.
