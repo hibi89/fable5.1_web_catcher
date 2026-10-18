@@ -20,6 +20,7 @@ CHART_OBSERVER_SCRIPT = r"""
 (() => {
   'use strict';
   const MAX_CHARTS = 80, MAX_MUTATIONS = 1200, MAX_BATCH_NODES = 120;
+  const GEOMETRY = new Set(['d','points','x','y','x1','x2','y1','y2','cx','cy','r','rx','ry','width','height','viewBox','transform']);
   const charts = new Map();
   let mutations = 0, capped = false, started = false;
   const clock = () => Math.round(performance.timeOrigin + performance.now());
@@ -53,7 +54,7 @@ CHART_OBSERVER_SCRIPT = r"""
       return ['Chart.js', 'chartjs_dom_marker', 0.7];
     return ['unknown', 'generic_' + el.tagName.toLowerCase(), 0.2];
   }
-  function record(el, changed) {
+  function record(el, changed, reason) {
     if (!ntype(el) || !/^(svg|canvas)$/.test((el.localName || el.tagName).toLowerCase())) return;
     let item = charts.get(el);
     if (!item && charts.size >= MAX_CHARTS) { capped = true; return; }
@@ -61,13 +62,19 @@ CHART_OBSERVER_SCRIPT = r"""
     if (!item) {
       item = {id: 'chart-' + String(charts.size + 1).padStart(3, '0'),
         library: type[0], library_evidence: [type[1]], selector: selector(el),
-        first_seen_ms: now, last_observed_update_ms: null,
+        first_seen_ms: now, last_observed_update_ms: null, change_evidence: null,
         detection_confidence: type[2], detection_level:
           type[0] === 'unknown' ? 'generic_markup_candidate' : 'library_dom_candidate',
         data_sources: []};
       charts.set(el, item);
     } else if (changed) {
-      item.last_observed_update_ms = now;
+      // Theme/hover class changes do not establish generic SVG data movement.
+      if (item.library !== 'unknown' || reason === 'svg_geometry_changed' ||
+          reason === 'svg_structure_changed') {
+        item.last_observed_update_ms = now;
+        if (reason === 'svg_geometry_changed' || reason === 'svg_structure_changed')
+          item.change_evidence = reason;
+      }
       if (item.library === 'unknown' && type[0] !== 'unknown') {
         item.library = type[0]; item.library_evidence = [type[1]];
         item.detection_confidence = type[2];
@@ -95,8 +102,14 @@ CHART_OBSERVER_SCRIPT = r"""
         if (++mutations > MAX_MUTATIONS) { capped = true; observer.disconnect(); break; }
         if (entry.type === 'childList') {
           for (const added of entry.addedNodes) visit(added, false);
+          const svg = entry.target.closest && entry.target.closest('svg');
+          if (svg && (entry.addedNodes.length || entry.removedNodes.length))
+            record(svg, true, 'svg_structure_changed');
         } else if (entry.type === 'attributes') {
           visit(entry.target, true);
+          const svg = entry.target.closest && entry.target.closest('svg');
+          if (svg && GEOMETRY.has(entry.attributeName))
+            record(svg, true, 'svg_geometry_changed');
           if (entry.target.parentElement &&
               /^(svg|canvas)$/.test((entry.target.parentElement.localName || entry.target.parentElement.tagName).toLowerCase()))
             record(entry.target.parentElement, true);
@@ -104,7 +117,8 @@ CHART_OBSERVER_SCRIPT = r"""
       }
     });
     observer.observe(document.documentElement, {childList:true, subtree:true,
-      attributes:true, attributeFilter:['class','style','width','height','viewBox','_echarts_instance_']});
+      attributes:true, attributeFilter:['class','style','width','height','viewBox','_echarts_instance_',
+        'd','points','x','y','x1','x2','y1','y2','cx','cy','r','rx','ry','transform']});
   }
   Object.defineProperty(window, '__fable51_chart_probe', {
     value: {snapshot: () => ({charts:Array.from(charts.entries()).filter(([el, item]) => {
@@ -130,6 +144,14 @@ CHART_OBSERVER_SCRIPT = r"""
 CSS_BAR_GROUP_SCRIPT = r"""
 () => {
   'use strict';
+  // Store only in-document geometry signatures; never persist the numbers.
+  let cache = window.__fable51_css_bar_geometry;
+  if (!cache) {
+    cache = new WeakMap();
+    Object.defineProperty(window, '__fable51_css_bar_geometry', {
+      value: cache, enumerable: false, configurable: false
+    });
+  }
   const groups = new Map();
   const candidates = document.querySelectorAll('[style*="height:"],[style*="width:"]');
   const cls = el => typeof el.className === 'string' ? el.className : '';
@@ -164,11 +186,18 @@ CSS_BAR_GROUP_SCRIPT = r"""
         heights.length / Math.max(parent.children.length,1) < 0.65 ||
         new Set(heights.map(n=>Math.round(n))).size < 3 ||
         box.width < 120 || box.height < 45) continue;
+    const now = Math.round(performance.timeOrigin+performance.now());
+    const signature = heights.map(n => n.toFixed(3)).join(',');
+    const prev = cache.get(parent);
+    const changed = !!prev && prev.signature !== signature;
+    const last = changed ? now : (prev ? prev.last : null);
+    cache.set(parent, {signature, last, first: prev ? prev.first : now});
     found.push({
       library: 'unknown', library_evidence: ['css_bar_group_pattern'],
       selector: selector(parent),
-      first_seen_ms: Math.round(performance.timeOrigin+performance.now()),
-      last_observed_update_ms: null,
+      first_seen_ms: prev ? prev.first : now,
+      last_observed_update_ms: last,
+      change_evidence: last !== null ? 'css_bar_geometry_changed' : null,
       detection_confidence: 0.5,
       detection_level: 'css_bar_pattern_candidate',
       data_sources: []
@@ -259,12 +288,16 @@ def normalize_probe(snapshot: object, technologies: object) -> tuple[list[dict],
         first = chart.get("first_seen_ms")
         last = chart.get("last_observed_update_ms")
         conf = chart.get("detection_confidence")
+        reason = chart.get("change_evidence")
+        if reason not in ("svg_geometry_changed", "svg_structure_changed", "css_bar_geometry_changed"):
+            reason = None
         charts.append({
             "id": f"chart-{len(charts)+1:03d}", "library": name,
             "library_evidence": evidence,
             "selector": selector,
             "first_seen_ms": first if type(first) is int and first > 0 else None,
             "last_observed_update_ms": last if type(last) is int and last > 0 else None,
+            "change_evidence": reason if type(last) is int and last > 0 else None,
             "detection_confidence": float(conf) if type(conf) in (float, int) and 0 <= conf <= 1 else 0.2,
             "detection_level": ("css_bar_pattern_candidate" if "css_bar_group_pattern" in evidence else
                                 "generic_markup_candidate" if name == "unknown" else "library_dom_candidate"),
