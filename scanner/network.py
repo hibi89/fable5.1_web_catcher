@@ -235,7 +235,8 @@ class NetworkCollector:
         # Release decoded-body candidates promptly; keep request metadata for mapping.
         for request, response in list(self._body_queue.items()):
             row = self._request_rows.get(request)
-            if row is None or row['response_body_analysis'] not in ('waiting_for_requestfinished',):
+            if row is None or row['response_body_analysis'] not in (
+                    'waiting_for_requestfinished', 'waiting_for_finished_size_check'):
                 self._body_queue.pop(request, None)
 
     def finalize(self):
