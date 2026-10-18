@@ -98,9 +98,24 @@ def build_llm_payload(result: dict) -> dict:
     allowed_names = _catalog()
     ev_index = {}
     evidence = []
-    omissions = {"evidence": 0, "findings": 0, "endpoints": 0,
+    omissions = {"evidence": 0, "duplicate_evidence": 0,
+                 "findings": 0, "endpoints": 0,
                  "charts": 0, "chart_api_candidates": 0}
-    for raw in result.get("evidence", []):
+    # Prioritize evidence cited by a finding, then deterministic structural
+    # evidence; this avoids wasting the 45-entry budget on unreferenced noise.
+    referenced = {eid for category in CATEGORIES
+                  for finding in result.get(category, [])
+                  if isinstance(finding, dict)
+                  for eid in finding.get("evidence_ids", [])
+                  if type(eid) is str}
+    priority = {"html": 0, "meta_generator": 1, "response_header": 2,
+                "cookie_name": 3, "script_src": 4,
+                "stylesheet_href": 5, "runtime_global": 6, "csp_domain": 7}
+    entries = [x for x in result.get("evidence", []) if isinstance(x, dict)]
+    entries.sort(key=lambda x: (x.get("id") not in referenced,
+                                priority.get(x.get("source"), 99)))
+    duplicate_signatures = {}
+    for raw in entries:
         if not isinstance(raw, dict):
             omissions["evidence"] += 1
             continue
@@ -109,15 +124,21 @@ def build_llm_payload(result: dict) -> dict:
         if not orig or orig in ev_index or source not in SAFE_EVIDENCE_SOURCES:
             omissions["evidence"] += 1
             continue
-        if len(evidence) >= MAX_EVIDENCE:
-            omissions["evidence"] += 1
-            continue
         marker = raw.get("value")
         marker = marker if type(marker) is str and marker in SAFE_EVIDENCE_MARKERS else None
         key = raw.get("key")
         key = key.lower() if type(key) is str and key.lower() in SAFE_FIELD_NAMES else "redacted"
+        signature = (source, key, marker)
+        if signature in duplicate_signatures:
+            ev_index[orig] = duplicate_signatures[signature]
+            omissions["duplicate_evidence"] += 1
+            continue
+        if len(evidence) >= MAX_EVIDENCE:
+            omissions["evidence"] += 1
+            continue
         eid = "e" + str(len(evidence) + 1).zfill(3)
         ev_index[orig] = eid
+        duplicate_signatures[signature] = eid
         evidence.append({"id": eid, "source": source, "key": key,
                          "structural_marker": marker})
     findings = []
@@ -201,6 +222,14 @@ def build_llm_payload(result: dict) -> dict:
                "charts": charts, "chart_api_candidates": mapped,
                "warnings": ["원본 경고 " + str(warning_count) + "건 (값 미전송)"] if warning_count else [],
                "omissions": omissions,
+               "omission_reasons": {
+                   "evidence": "invalid source/ID or max 45 allowed",
+                   "duplicate_evidence": "same sanitized evidence source/key/marker",
+                   "findings": "no allowed evidence or max 35",
+                   "endpoints": "invalid identifier or max 24",
+                   "charts": "invalid identifier or max 16",
+                   "chart_api_candidates": "unreferenced pair or max 20",
+               },
                "limitations": ["한 페이지에서 관찰된 부분 단서이며 실제 서버 코드/DB를 확인한 것이 아닙니다.",
                                "부분 JSON 구조는 첫 표본 객체이며 전체 스키마를 의미하지 않습니다.",
                                "confidence는 기존 엔진의 휴리스틱 점수이고 확률이 아닙니다.",
