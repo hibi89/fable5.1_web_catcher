@@ -86,12 +86,22 @@ def main():
         tracked_ids = set()
 
         def received_request(evt):
+            # Count all CDP requests before filtering; do not persist URLs.
+            request_event_classes["any_cdp_request_event"] += 1
             info = evt.get("request") or {}
             url = info.get("url")
             method = info.get("method")
-            if not isinstance(url, str) or not self.allow_url(url):
+            if not isinstance(url, str):
+                request_event_classes["no_string_url"] += 1
                 return
-            if url.rsplit("/", 1)[-1] not in ("gz-small", "gz-large"):
+            from urllib.parse import urlsplit
+            path = urlsplit(url).path
+            if path not in ("/gz-small", "/gz-large"):
+                request_event_classes["non_fixture_request"] += 1
+                return
+            request_event_classes["fixture_path_request"] += 1
+            if not self.allow_url(url):
+                request_event_classes["fixture_url_not_approved"] += 1
                 return
             request_event_classes["allowed_target_request_event"] += 1
             if evt.get("frameId") == frame:
