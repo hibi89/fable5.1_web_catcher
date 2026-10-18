@@ -22,4 +22,4 @@
 
 원본: 대화 첨부 `fable5.1_step2.txt`. Chromium + Playwright로 실행 관찰, XHR/fetch·WebSocket/SSE 연결의 메타데이터, JSON 구조, 런타임 차트 라이브러리, 차트↔API **연관 후보**, 현재 로드된 동일 origin JS 번들 문자열을 근거로 분석한다. 비밀값·원본 응답·storage state·HAR 저장 금지. 자동 로그인·클릭·폼 제출·우회·무작위 API 탐색 금지. Step 1의 정적 분석은 그대로 유지한다.
 
-Step 2 단위 1~5 구현: 격리 Chromium·XHR/fetch 및 제한 JSON 구조·WS/SSE·차트 DOM 후보·차트↔API 보수적 연관 후보. 일반 SVG/canvas와 시간 근접은 실제 데이터 연결의 증거가 아니며, 경합 API가 있으면 연결 보류. confidence는 비확률적 휴리스틱. **JS 번들 후보 및 전체 Step 2 검수 미완료**.
+Step 2 단위 1~6 구현: 격리 Chromium·XHR/fetch/JSON 형태·WS/SSE·차트 DOM·연관 후보 및 **이미 로드된 동일 출처 JS 문자열의 미검증 API 후보**. 관찰 API와 문자열 후보는 결과 영역·상태를 분리하고 원본 번들 저장/새 경로 탐색 금지. 상용 실사이트 정확도 및 전체 Step 2 최종 통합 검수는 아직 미완료.
