@@ -430,7 +430,16 @@ def run_record(url: str, result: dict, *, timeout: float,
                     for c in local['charts']:
                         chart_key = (key, c['selector'], c['library'])
                         if chart_key in seen:
-                            c['id'] = seen[chart_key]['id']
+                            previous_chart = seen[chart_key]
+                            c['id'] = previous_chart['id']
+                            # Keep a previously observed change when an SPA
+                            # destroys/recreates the same structural selector.
+                            previous_update = previous_chart.get('last_observed_update_ms')
+                            incoming_update = c.get('last_observed_update_ms')
+                            if (type(previous_update) is int and
+                                    (type(incoming_update) is not int or incoming_update < previous_update)):
+                                c['last_observed_update_ms'] = previous_update
+                                c['change_evidence'] = previous_chart.get('change_evidence')
                         else:
                             existing_charts = [k for k in seen
                                                if isinstance(k, tuple) and len(k) == 3]
