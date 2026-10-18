@@ -1,3 +1,15 @@
+# Step 3 후속 1단위 완료 — Content-Length 없는 외부 API JSON (2026-10-18 22:30 KST)
+
+## 새 구현/검증
+- PR #3 https://github.com/hibi89/fable5.1_web_catcher/pull/3 main 병합 SHA `f7b9bb9c09bc69cd305519b5676af31ff4b2d7ea`, 기능 테스트 SHA `dc5992391b399e29bcf6167daf455676e3c15ca7`.
+- 기존 NetCollector의 `size_unknown` 분기에서 Step 3 Record만 `allow_unknown_length=True`로 허용해 Playwright 요청 완료 이후 실제 전송 바이트 측정. 128KiB 초과, 크기 측정 실패, 미확인 길이 압축 데이터는 분석 거절. 응답 본문을 일시적으로만 읽고 길이 재검사 후 타입 구조만 저장. 구조/값/접근 범위/인증 보호 규칙 유지. Step 2는 opt-in False로 회귀 방지.
+- GitHub Windows Python 3.11 `39131631123`: 63/63 PASS. 실제 Ubuntu headed Chromium/Xvfb `39131631050`: 20/20 PASS; 선택 공개 URL smoke 4/4 PASS. 회귀/인가/압축/실제 HTTP chunked 테스트 포함.
+- 문서 근거 `docs/STEP3_HEADERLESS_JSON_BOUND_2026-10-18.md`. 사용자 PC에서 신규 기능 재시험 전. **사용자 기존 result(3).json**으로 확인한 33.312초·35 클릭/중복 0·차트 3/ID 중복 0 결과는 지난 코드 기준이며 그대로 기록 보존.
+- 한계: 브라우저의 실제 디코딩 메모리 사용을 128KiB로 하드 제한하는 구현은 아님. size_unknown이 현장에선 계속 유지될 수 있으며, 차트↔API 매핑 0건 문제와 iframe, 종료 시 TargetClosedError 경고는 별도 작업.
+- 다음 `ㄱ`: 별도 한 단위만 진행(후보: generic SVG/CSS의 상태 변경 증거 강화). 사용자 Windows 개입 요구 없이 fixture·GitHub CI 중심 구현을 우선. 공개 서비스 배포 금지.
+
+---
+
 # Step 3 Windows 현장 재시험 검증 완료 (2026-10-18 22:03 KST)
 
 - 새 사용자 제출 `result(3).json`은 33.312초 새로운 headed Record이며 `stop_reason=browser_closed`, 클릭 35건/중복 0, SPA navigation 1, 차트 후보 3개/ID 중복 0, target.final_url 보존, 승인한 API origin 2개. PR #2 기능 수정의 실제 Windows 핵심 회귀는 통과한 것으로 판정.
