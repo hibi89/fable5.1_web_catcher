@@ -1,10 +1,39 @@
-# Fable 5.1 Web Catcher — Step 1 정적 분석 + Step 2 런타임 분석
+# Fable 5.1 Web Catcher — Step 1 정적 + Step 2 런타임 + Step 3 수동 Record
 
 **Python 3.11+에서 동작하는 공개 웹페이지 기술 단서 정적/Chromium 런타임 분석 CLI**입니다. 읽기 전용 GET 요청으로 URL 한 페이지의 HTML과 응답 메타데이터를 조사한 뒤, 근거 기반으로 프론트엔드 / 백엔드 **추정** / 인프라·CDN 정보를 JSON과 한국어 Markdown으로 기록합니다.
 
 백엔드 소스코드, DB, 비공개 API를 복원하는 도구가 아닙니다. 근거가 없다면 `unknown`입니다. `confidence`는 휴리스틱 점수(0–1)이며 통계적 확률이 아닙니다. 헤더와 쿠키는 변경·위조가 가능하므로 기술 확정 증거가 아닙니다.
 
 **현재 인수검사 (2026-10-18): Step 1 7/7, Step 2 9/9 PASS.** Windows 55/55, 실제 Chromium 11/11, 공개 홈페이지 정적·런타임 4/4 PASS. [Step 2 최종 수용 검사](docs/STEP2_FINAL_ACCEPTANCE.md)를 참조하세요. 기록된 연관 점수는 실제 데이터 lineage가 아닌 휴리스틱 추정입니다.
+
+## Step 3: 수동 Record (권한 있는 사이트에서만)
+
+Record는 새 비영구 Chromium 창을 띄웁니다. 사용자가 직접 로그인·클릭·필터 조작을 수행하는 동안 Step 2의 네트워크·차트·JS 번들 수집기를 재사용합니다. 자동 로그인·클릭·WAF 우회·세션 보존은 하지 않습니다.
+
+Windows PowerShell (화면이 보이는 데스크톱에서 실행):
+
+~~~powershell
+python -m pip install -r requirements.txt
+python -m playwright install chromium
+python scan.py "https://example.com/#dashboard" --record --out ./out/record
+python scan.py "https://example.com/" --record --max-duration 900 --allow-origin https://api.example.com --out ./out/record-allowed
+~~~
+
+조작 후 원래 터미널로 돌아와 Enter를 누르면 result.json/report.md가 생성됩니다. Ctrl+C, 모든 창 종료, 시간 만료도 종료 신호입니다. --record --runtime은 브라우저 하나만 띄우고, --wait는 Record 종료에 사용되지 않습니다. 입력 URL의 origin만 기본 허용하며 --allow-origin은 경로·와일드카드 없는 정확한 origin을 반복 지정할 수 있습니다. 허용 밖 사이트로 사용자가 이동할 수는 있지만 DOM/상호작용 및 외부 API 응답 구조는 분석하지 않습니다. 인증/토큰 경로의 본문은 허용 여부에 관계없이 분석하지 않습니다.
+
+출력 record에는 시작/종료 시간, 종료 원인, 마스킹된 문서 목록, click/change 시각·구조적 selector, 수집 한도 생략 건수가 저장됩니다. 비밀번호, 입력값, 쿠키 값, 인증 헤더, 요청·응답 원문, HAR, 스크린샷, 브라우저 세션은 저장하지 않습니다. API 경로·JSON 필드명에도 업무상 정보가 포함될 수 있으니 공유 전 점검해야 합니다.
+
+제약: 비대화형 stdin/EOF(오류), 디스플레이 없는 환경, iframe 내부 DOM/행동 분석, 완전한 인과적 차트↔API 증명은 지원하지 않습니다. JSON 구조는 값 없는 유형 정보이며 일부 이벤트는 제한 때문에 누락될 수 있습니다. Playwright의 압축 해제 순간 메모리 절대 상한은 보장되지 않습니다.
+
+테스트:
+
+~~~bash
+python -m pytest -q
+# Linux의 실제 headed 브라우저 fixture는 가상 디스플레이 필요
+xvfb-run -a python -m pytest -q tests/browser_record_check.py
+~~~
+
+Step 3 실제 CI와 사용자 Windows 직접 로그인 절차가 검증되기 전에는 완료로 판정하지 않습니다.
 
 ## 설치 및 실행
 
