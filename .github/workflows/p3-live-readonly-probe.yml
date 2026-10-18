@@ -1,0 +1,29 @@
+name: P3 one-off bounded JSON prefix hint live test
+
+on:
+  push:
+    branches: ["probe/p3-live-prefix-20261019"]
+  pull_request:
+    branches: [main]
+    paths:
+      - "tests/p3_live_readonly_probe.py"
+      - ".github/workflows/p3-live-readonly-probe.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  observe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: python -m pip install --disable-pip-version-check -r requirements.txt
+      - name: Install Chromium
+        run: python -m playwright install --with-deps chromium
+      - name: Run read-only headed Record against public dashboard
+        run: xvfb-run -a python -u -m tests.p3_live_readonly_probe
