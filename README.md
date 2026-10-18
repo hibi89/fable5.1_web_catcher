@@ -225,3 +225,17 @@ api.chart_candidates에는 chart_id, endpoint_id, candidate_only 상태, 비확�
 - `charts[].data_sources`: 연관 후보의 endpoint ID, 실제 데이터 흐름 확정 아님
 
 최종 검사 명령: `python -m pytest -q`; Chromium fixture는 `python -m pytest -q tests/browser_runtime_check.py tests/browser_mapping_check.py tests/browser_bundle_check.py tests/browser_final_check.py`. 별도 공개 URL smoke는 `python -m pytest -q -s tests/public_runtime_smoke.py`이며 네트워크 의존으로 CI에서는 비필수입니다.
+
+## Step 2 실사이트 정확도 개선 사례 (2026-10-18)
+
+대상: https://daily-dashboard-ldh-1013.clevertide128.chatgpt.site/#v-dash
+
+- Chromium에서 처음 발견된 일반 SVG 후보 14~15건에는 작은 아이콘이 섞여 있었음. 보이는 크기와 도형 수를 추가 확인한 결과, 최종 차트 후보는 3건(큰 SVG 2, CSS 막대 그룹 1)으로 감소.
+- CSS로 표현된 반복 퍼센트 높이 막대 그룹을 낮은 신뢰도의 시각화 후보로 탐지. 이 근거는 실제 차트 라이브러리나 데이터 소스를 확정하지 않음.
+- SPA URL의 해시(#v-dash)는 --runtime 브라우저 탐색에 전달하되 결과 파일에는 기록하지 않음.
+- 검증: Windows 57/57 PASS, 실제 Chromium 통합 12/12 PASS, 실사이트 분석 HTTP 200/경고 0.
+- 상세 진단: docs/DASHBOARD_LIVE_ACCURACY_2026-10-18.md
+- 사용자 Windows에서 새 코드를 내려받은 뒤 재실행하는 검증은 별도이며, 실사이트 전체 차트 탐지율을 수치화한 것은 아님.
+
+실사이트 실행:
+    python scan.py "https://daily-dashboard-ldh-1013.clevertide128.chatgpt.site/#v-dash" --runtime --wait 10 --out ./out/dashboard-test
