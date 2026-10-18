@@ -2,7 +2,7 @@
 
 Observed XHR/fetch and WebSocket/SSE connection metadata are enabled.
 Known runtime library markers and DOM chart candidates are enabled.
-Chart-to-API scoring and bundle analysis remain out of scope.
+Conservative chart-to-observed-API hypotheses supported; bundle inspection remains out of scope.
 """
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from .sanitize import safe_url
 from .network import NetworkCollector
 from .connections import ConnectionCollector
 from .runtime_detect import CHART_OBSERVER_SCRIPT, collect_runtime_charts
+from .chart_mapping import map_chart_api_candidates
 
 # Installed by Playwright BEFORE navigation, to observe page timings only.
 # No site state, forms, cookies, or storage are changed by this script.
@@ -70,7 +71,7 @@ def scan_runtime_page(url: str, result: dict, *, timeout: float, wait: float, he
         'xhr_fetch_requests_seen': 0,
         'xhr_fetch_responses_seen': 0,
     }
-    warnings.append('Step 2 부분 구현: 런타임 기술·차트 DOM 후보 수집. 차트↔API 연결 점수·JS 번들은 아직 미구현입니다.')
+    warnings.append('Step 2 부분 구현: 런타임 기술·차트 DOM 후보 수집. 차트↔API 후보만 추정합니다. 실제 연결 확정·JS 번들은 미구현입니다.')
     try:
         from playwright.sync_api import Error as BrowserError
         from playwright.sync_api import TimeoutError as BrowserTimeoutError
@@ -137,6 +138,10 @@ def scan_runtime_page(url: str, result: dict, *, timeout: float, wait: float, he
                         connections.finalize()
                     except Exception:
                         warnings.append('연결 관찰 마무리 오류: 기록된 연결만 보존')
+                    try:
+                        map_chart_api_candidates(result)
+                    except Exception:
+                        warnings.append('차트↔API 후보 계산 실패: 관찰된 데이터만 보존')
             except BrowserError:
                 warnings.append('Chromium 실행 실패: python -m playwright install chromium 명령으로 설치를 확인하세요.')
                 fatal = True
