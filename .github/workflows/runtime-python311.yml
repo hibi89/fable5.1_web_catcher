@@ -16,6 +16,7 @@ on:
       - 'tests/fixture_server.py'
       - 'tests/test_network.py'
       - 'tests/browser_runtime_check.py'
+      - 'tests/browser_mapping_check.py'
       - '.github/workflows/runtime-python311.yml'
   workflow_dispatch:
 
@@ -37,4 +38,4 @@ jobs:
       - name: Install Chromium and OS dependencies
         run: python -m playwright install --with-deps chromium
       - name: Run real-browser local fixture test
-        run: python -m pytest -q tests/browser_runtime_check.py
+        run: python -m pytest -q tests/browser_runtime_check.py tests/browser_mapping_check.py
