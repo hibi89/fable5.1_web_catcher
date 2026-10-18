@@ -1,3 +1,14 @@
+# 2026-10-18 22:03 KST — Step 3 Windows 실제 사이트 재시험 결과 (result(3).json)
+
+- **핵심 Record 동작 및 PR #2 현장 회귀 검증 통과.** 실제 33.312초 수집, browser_closed 정상 종료, 35건 실제 click, 복합키 기준 중복 **0건**, SPA 문서 1건/nav-0001, 차트 후보 3건/ID 충돌 0건, target.final_url 기록 성공.
+- 승인한 외부 API origin을 포함해 2곳 허용. 기록된 API 200 application/json, `response_body_analysis=size_unknown` → Content-Length 미확인으로 JSON 구조 분석 보류, `chart_candidates=0`. 차트 후보는 generic SVG/CSS, 관찰 갱신 시각 없음. 첫 기록 클릭은 보존된 API 응답보다 1,539ms 뒤. 데이터 흐름을 임의 연결하면 안 된다.
+- 본 실사이트 검사에선 클릭으로 인한 실제 필터 변화나 차트↔API 대응 후보는 미검증. Step 3 CLI 실사용/중복 수정 검증은 완료이지만 사용자 지침의 최종 예시인 'API와 차트 연관 후보 표시'는 이 사이트에서 충족되지 않았다.
+- 경고: iframe 미지원, 네트워크 상세 1건 생략, browser_closed에 따른 TargetClosedError 차트 스냅샷 오류(정상 종료 자체는 성공).
+- 현장 검사 원본 `result(3).json` SHA-256 `f501ee54ce773c8f7f1bd22945045371929d8ecf7275a876738595bfcf985067`; 전체 원본 결과는 GitHub 저장 금지. 상세: `docs/STEP3_WINDOWS_REAL_SITE_VERIFICATION_2026-10-18.md`.
+- 이전 상태의 '실사이트 최종 재시험 미확인' 문구는 역사적 기록이며, **이번 새 현장 자료가 해당 확인을 대체한다**.
+
+---
+
 # 2026-10-18 사용자 업로드 후속 판정 — 새 실사이트 재시험 미확인
 
 - 사용자가 추가 제출한 `result(2).json`은 직전 `result(1).json`과 바이트 단위로 완전히 동일 (SHA-256 `f47e088964ee947c7c3daf6be90d66565190ccb94f868491450036e2d1a29d0f`).
