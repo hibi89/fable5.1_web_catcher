@@ -72,7 +72,6 @@ def scan_runtime_page(url: str, result: dict, *, timeout: float, wait: float, he
         'xhr_fetch_requests_seen': 0,
         'xhr_fetch_responses_seen': 0,
     }
-    warnings.append('Step 2 부분 구현: 런타임 기술·차트 DOM 후보 수집. 차트↔API 연관 및 로드된 JS 문자열 미검증 후보를 분리합니다. 실제 연결 확정은 불가합니다.')
     try:
         from playwright.sync_api import Error as BrowserError
         from playwright.sync_api import TimeoutError as BrowserTimeoutError
