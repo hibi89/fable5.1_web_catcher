@@ -5,6 +5,7 @@ import copy
 import io
 import json
 import re
+import secrets
 import tempfile
 import time
 from datetime import datetime, timezone
@@ -48,7 +49,7 @@ def parse_urls(path, max_urls=50):
     return valid, errors
 
 
-def _redact(value, key="", target_no=1):
+def _redact(value, key="", origin_alias="https://batch-unknown.invalid"):
     """Serialize a constrained result without raw identifiers or PII."""
     from .llm_payload import _catalog
     allowed_technologies = _catalog()
@@ -61,14 +62,14 @@ def _redact(value, key="", target_no=1):
                     "fields": safe_structure(value.get("fields"))}
         return None
     if isinstance(value, dict):
-        return {k: _redact(v, k, target_no) for k, v in value.items()
+        return {k: _redact(v, k, origin_alias) for k, v in value.items()
                 if not k.lower().startswith(("raw_", "secret_", "access_token"))}
     if isinstance(value, list):
-        return [_redact(v, key, target_no) for v in value[:200]]
+        return [_redact(v, key, origin_alias) for v in value[:200]]
     if not isinstance(value, str):
         return value
     if key in ("input_url", "final_url", "url", "source_script"):
-        return anonymous_path(value, origin="site_" + str(target_no).zfill(3))
+        return anonymous_path(value, origin=origin_alias)
     if key == "name":
         return value if value in allowed_technologies or value == "unknown" else "unknown"
     if key == "version":
@@ -87,8 +88,8 @@ def _redact(value, key="", target_no=1):
     return "[REDACTED]"
 
 
-def safe_batch_result(result, number):
-    clean = _redact(result, target_no=number)
+def safe_batch_result(result, origin_alias):
+    clean = _redact(result, origin_alias=origin_alias)
     # Drop raw-content-derived strings and all potential URL hints not
     # needed for reproducible offline comparison/contracts.
     clean["warnings"] = ["상세를 저장하지 않은 원본 경고"] * min(100, len(result.get("warnings", [])))
@@ -142,10 +143,20 @@ def run_batch(input_path, output, *, scan_fn, runtime=False, headed=False,
     urls, errors = parse_urls(input_path, max_urls=max_urls)
     new_directory(output)
     targets = []
+    run_nonce = secrets.token_hex(6)  # not a server secret, just an alias namespace
+    origin_aliases = {}
+    aliases = []
     for i, url in enumerate(urls, 1):
+        parts = urlsplit(url)
+        key = (parts.scheme, parts.hostname, parts.port)
+        if key not in origin_aliases:
+            index = len(origin_aliases) + 1
+            origin_aliases[key] = ("https://batch-" + run_nonce + "-origin-" +
+                                   str(index).zfill(3) + ".batch.invalid")
+        aliases.append(origin_aliases[key])
         targets.append({
             "target_id": "target-" + str(i).zfill(3),
-            "masked_url": safe_batch_url(url, i),
+            "masked_url": safe_batch_url(url, aliases[-1]),
             "status": "pending", "started_at": None, "ended_at": None,
             "duration_seconds": None, "result_path": None, "report_path": None,
             "warnings": [], "error": None,
@@ -192,7 +203,7 @@ def run_batch(input_path, output, *, scan_fn, runtime=False, headed=False,
                 if not scan_file.exists():
                     raise ValueError("missing_result")
                 obj = json.loads(scan_file.read_text(encoding="utf-8"))
-                clean = safe_batch_result(obj, i+1)
+                clean = safe_batch_result(obj, aliases[i])
                 folder.mkdir(parents=True, exist_ok=False)
                 atomic_json(folder / "result.json", clean)
                 # Reports are generated from redacted structured values.
