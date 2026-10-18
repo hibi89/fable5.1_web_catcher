@@ -83,6 +83,20 @@ def to_markdown(result: dict) -> str:
             ])
         candidate_lines.append("")
         lines[lines.index("## 한계 및 주의"):lines.index("## 한계 및 주의")] = candidate_lines
+        bundle = runtime.get("bundle_scan", {})
+        paths = result["api"].get("bundle_candidates", [])
+        bundle_lines = ["## 로드된 JS 문자열 기반 미검증 API 후보", "",
+                        f"- 실제 로드된 동일 출처 JS 검사: {bundle.get('scanned_scripts', 0)}건",
+                        f"- 미검증 문자열 경로: {len(paths)}건",
+                        "- 브라우저가 이미 받은 JS만 검사; 원본 JS·비밀값은 저장하지 않음.",
+                        "- 이 문자열은 실제 API 요청을 의미하지 않습니다.", ""]
+        for item in paths:
+            bundle_lines.append(
+                f"- {item['path']} · {item['source_script_id']}"
+                " · unverified_string_literal · confidence 0.200 (확률 아님)"
+            )
+        bundle_lines.append("")
+        lines[lines.index("## 한계 및 주의"):lines.index("## 한계 및 주의")] = bundle_lines
         tech = runtime.get("technologies", [])
         charts = result.get("charts", [])
         chart_lines = ["## 런타임 기술 근거 및 차트 DOM 후보", "",
