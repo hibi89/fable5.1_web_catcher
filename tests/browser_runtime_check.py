@@ -18,7 +18,7 @@ def test_real_chromium_local_fixture(tmp_path):
     assert data['target']['status_code'] == 200
     assert data['runtime']['domcontentloaded_observed'] is True
     assert data['runtime']['scroll_steps'] <= 2
-    assert data['api'] == {'endpoints': [], 'candidates': [], 'connections': []}
+    assert data['api'] == {'endpoints': [], 'candidates': [], 'connections': [], 'bundle_candidates': []}
     assert data['charts'] == []
     assert data['target']['scripts']
     assert 'RUNTIME_INPUT_PRIVATE' not in (tmp_path / 'result.json').read_text(encoding='utf-8') + rendered
