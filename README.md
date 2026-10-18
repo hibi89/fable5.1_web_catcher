@@ -165,8 +165,8 @@ JSON 중첩 5단계, 객체 키 24개, 배열 표본 3개로 제한합니다.
 오프라인 단위 테스트: `python -m pytest -q tests/test_network.py`
 (일반 전체: `python -m pytest -q`).
 실제 Chromium fixture: `python -m pytest -q tests/browser_runtime_check.py`.
-api.candidates와 차트별 data_sources는 비어 있지만 charts와 api.connections에 실제 관찰 근거를 기록합니다.
-WS/SSE 단위 3, 알려진 차트 라이브러리·DOM 후보 단위 4 구현. 차트↔API 연관 점수·JS 번들 분석은 미구현입니다.
+단위 5에서는 근거가 유일할 때만 api.candidates와 charts[].data_sources에 연관 후보를 기록하며, 근거가 부족하거나 경쟁 응답이 있으면 빈 배열입니다.
+WS/SSE 단위 3, 차트 DOM 후보 단위 4, 보수적 차트↔API 후보는 단위 5에서 구현했습니다. JS 번들은 미구현입니다.
 
 ## Step 2 — 단위 3: WebSocket·SSE 연결 관찰
 
@@ -182,7 +182,7 @@ python -m pytest -q tests/test_connections.py
 python -m pytest -q tests/browser_runtime_check.py
 ```
 
-알려진 차트 라이브러리/DOM 후보는 단위 4에서 구현. 차트↔API 연결 및 번들은 아직 미구현입니다.
+알려진 차트 라이브러리/DOM 후보는 단위 4에서 구현했고, 단위 5는 API 연관 후보만 제공합니다. 번들 분석은 미구현입니다.
 
 ## Step 2 — 단위 4: 런타임 기술·차트 DOM 후보
 
@@ -196,4 +196,12 @@ DOM 최초 등장 시각은 렌더 완료가 아니며 MutationObserver는 canva
 Unit tests: python -m pytest -q tests/test_runtime_detect.py
 Chromium fixture: python -m pytest -q tests/browser_runtime_check.py
 라이브러리 전역은 테스트용 stub으로 검증했습니다. 실제 배포 라이브러리 통합 테스트는 별도입니다.
-차트↔API 후보 점수 및 JS 번들 문자열 탐지는 아직 미구현입니다.
+차트↔API 후보 점수는 단위 5에서 구현했고 JS 번들 문자열 탐지는 미구현입니다.
+
+## Step 2 — 단위 5: 차트↔API 연관 후보
+
+차트 라이브러리 DOM 마커, 응답이 완료된 2xx JSON의 시간·수치형 시계열 구조, 응답 후 최대 1200ms 이내 DOM 속성 갱신을 함께 확인합니다. 단순 시간 일치나 일반 SVG/canvas는 연결하지 않으며 동등한 적격 API가 2개 이상이면 연결을 보류합니다.
+
+api.candidates에는 chart_id, endpoint_id, candidate_only 상태, 비확률적 confidence(0.55~0.65), 근거 및 한계를 보관합니다. charts[].data_sources는 후보 endpoint ID를 가리킵니다. 실제 데이터 연결의 증명이 아니며 반복 일관성도 검증하지 않았습니다. 추가 API 호출이나 원본 응답 저장은 없습니다.
+
+테스트: `python -m pytest -q`와 `python -m pytest -q tests/browser_runtime_check.py tests/browser_mapping_check.py`. 번들 단서 및 전체 Step 2 검증은 이후 별도 단위입니다.
