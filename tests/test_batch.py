@@ -202,3 +202,28 @@ def test_batch_redacted_api_urls_remain_usable_for_contracts(tmp_path):
     assert schema_path.is_file()
     jsonschema.Draft202012Validator.check_schema(
         json.loads(schema_path.read_text(encoding="utf-8")))
+
+
+def test_batch_redacted_report_preserves_valid_evidence_references(tmp_path):
+    """Privacy redaction must keep structural evidence IDs for rendering."""
+    from scanner.batch import safe_batch_result
+    from scanner.report import to_markdown
+    from scanner.models import blank_result
+    original = blank_result("https://customer.example/private?token=SECRET")
+    original["frontend"] = [{
+        "name": "React", "version": None,
+        "confidence": 0.8, "evidence_ids": ["ev_001"],
+    }]
+    original["evidence"] = [{
+        "id": "ev_001", "source": "html", "key": "test",
+        "value": "PERSON_PRIVATE", "note": "SECRET_NOTE",
+    }]
+    cleaned = safe_batch_result(
+        original, "https://batch-fixture-origin-001.batch.invalid")
+    refs = cleaned["frontend"][0]["evidence_ids"]
+    assert refs == ["ev_001"]
+    assert set(refs) <= {e["id"] for e in cleaned["evidence"]}
+    report = to_markdown(cleaned)
+    assert "ev_001" in report
+    for private in ("customer.example", "PERSON_PRIVATE", "SECRET_NOTE", "SECRET"):
+        assert private not in report
