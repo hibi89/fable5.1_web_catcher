@@ -81,6 +81,32 @@ class FixtureHandler(BaseHTTPRequestHandler):
         if path == "/stream":
             self._sse_fixture()
             return
+        if path == "/final-bundle.js":
+            # This is deliberately a *loaded* script, not a site probe.
+            code = (b'const hint="/api/unused?api_key=JS_LITERAL_PRIVATE";'
+                    b'const observed="/api/chart";')
+            self._dynamic_response(code, "application/javascript")
+            return
+        if path == "/runtime-final":
+            page = """<!doctype html><html><body>
+            <svg class="highcharts-root" width="300" height="100"></svg>
+            <canvas width="80" height="40"></canvas>
+            <script src="/final-bundle.js?token=SCRIPT_SRC_PRIVATE"></script>
+            <script>
+              setTimeout(() => {
+                const w = new WebSocket('ws://127.0.0.1:__PORT__/ws?token=WS_URI_PRIVATE');
+                w.addEventListener('open', () => w.send('WS_PAYLOAD_PRIVATE'));
+                const stream = new EventSource('/stream?api_key=SSE_URI_PRIVATE');
+                stream.addEventListener('message', () => {});
+                Promise.all([
+                  fetch('/api/chart?access_token=CHART_URI_PRIVATE'),
+                  fetch('/api/noise?token=NOISE_URI_PRIVATE')
+                ]).then(() => document.querySelector('svg')
+                   .setAttribute('viewBox', '0 0 300 100'));
+              }, 80);
+            </script></body></html>""".replace("__PORT__", str(self.server.server_port))
+            self._dynamic_response(page.encode("utf-8"), "text/html; charset=utf-8")
+            return
         if path == "/runtime-charts":
             # Explicit test-only library stubs, not real third-party distributions.
             page = """<!doctype html><html><body>
