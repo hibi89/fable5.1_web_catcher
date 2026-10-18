@@ -47,7 +47,7 @@ def to_markdown(result: dict) -> str:
                   "- 정적 GET 1페이지 외 로그인, API 호출, 임의 경로 탐색, 동적 JS 실행은 수행하지 않았습니다.",
                   "- Step 1의 API와 차트 관계 분석은 비활성화되어 있습니다.", "",
                   "## 경고", ""])
-    if result["scan_mode"] == "runtime":
+    if result["scan_mode"] in ("runtime", "record"):
         lines[0] = "# Fable 5.1 Web Catcher — 런타임 브라우저 관찰 보고서"
         for i, line in enumerate(lines):
             if line.startswith("- 분석 모드:"):
@@ -174,6 +174,38 @@ def to_markdown(result: dict) -> str:
                             "서로 가까운 요청도 차트 데이터 소스로 확정하지 않습니다.", ""])
         index = lines.index("## 한계 및 주의")
         lines[index:index] = entry_lines
+    if result["scan_mode"] == "record":
+        lines[0] = "# Fable 5.1 Web Catcher — 수동 Record 관찰 보고서"
+        for i, line in enumerate(lines):
+            if line.startswith("- 분석 모드:"):
+                lines[i] = "- 분석 모드: record — 사용자가 직접 조작한 허용 origin의 Chromium 관찰"
+            elif line.startswith("- 격리 브라우저로 페이지만 열고"):
+                lines[i] = "- 브라우저 조작과 로그인은 사용자가 직접 수행합니다. 자격증명·입력값은 저장하지 않습니다."
+        rec = result.get("record", {})
+        rows = ["## Record 수집 구간 및 범위", "",
+                f"- 시작 UTC: {rec.get('record_started_at')}",
+                f"- 종료 UTC: {rec.get('record_ended_at')}",
+                f"- 진행 초: {rec.get('duration_seconds')}",
+                f"- 종료 원인: {rec.get('stop_reason')}",
+                "- 허용 origin: " + ", ".join(rec.get("allowed_origins", [])),
+                f"- 기록 문서: {len(rec.get('pages', []))}건",
+                f"- 조작 마커: {len(rec.get('interactions', []))}건 (클릭/변경의 시각·구조적 selector만)",
+                "- 제한으로 생략: " + json.dumps(rec.get("omitted_events", {}), ensure_ascii=False),
+                "- 범위 밖 페이지 DOM 및 외부 API 본문은 분석하지 않습니다.",
+                "- 클릭과 API/차트의 시간 근접은 인과관계를 증명하지 않습니다.", ""]
+        for page in rec.get("pages", [])[:30]:
+            rows.append(f"- {page['page_id']}/{page['navigation_id']} · {page['url']}"
+                        f" · 범위 {'허용' if page['allowed'] else '제외'}")
+        if len(rec.get("pages", [])) > 30:
+            rows.append("- 문서 보고서 표시 상한 30건 (JSON에는 상한 내 전체 기록)")
+        rows.append("")
+        for marker in rec.get("interactions", [])[:40]:
+            rows.append(f"- 조작 {marker['type']} {marker['page_id']}/{marker['navigation_id']}"
+                        f" · {marker['tag']} · {marker['selector']} · {marker['at_ms']}ms")
+        if len(rec.get("interactions", [])) > 40:
+            rows.append("- 조작 보고서 표시 상한 40건 (JSON에는 상한 내 전체 기록)")
+        rows.append("")
+        lines[lines.index("## 한계 및 주의"):lines.index("## 한계 및 주의")] = rows
     lines.extend([f"- {safe_text(w)}" for w in result["warnings"]] or ["- 없음"])
     return "\n".join(lines) + "\n"
 
