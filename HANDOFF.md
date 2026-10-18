@@ -1,3 +1,15 @@
+# 2026-10-19 00:14 KST — p3 무길이 압축 JSON CDP decoded-length 단계 완료 및 실사이트 검증
+
+- **PR #7** https://github.com/hibi89/fable5.1_web_catcher/pull/7 main merge `4fe091451e3278aab8477abb1913144c9b3d00e5`, tested source `c9e735b0d8ac79fc762f533577e582d8c780c04c`.
+- Windows fixture **67/67 PASS** run `39139094290`, 실제 Ubuntu Chromium **22/22 PASS**, 보조 공개 smoke **4/4 PASS** run `39139094270`. 본문값/세션 수집·새 URL probing 없음, 승인 main-frame origin과 인증 경로 제외 유지.
+- 새 `scanner/cdp_decoded_size.py`가 CDP Network.dataReceived `dataLength`만 합산(128KiB까지 포화)해 Content-Length 없는 gzip/br의 디코딩 크기 상한 확인. `scanner/record_scan.py` 승인 `ScopedNetworkCollector`만 적용, `scanner/network.py` 측에서 body 실제 크기 동일성·128KiB 재검사. 측정 실패/중복 URL+메서드/이벤트 누락/큰 응답은 본문 미수집. Step 1/2 원본 구현·정책 변경 없음.
+- 실험 [39138406625](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39138406625): gzip 171B→1171B 분석; 461B→400015B 거절. 실패한 `streamResourceContent` 실험은 [PR #6](https://github.com/hibi89/fable5.1_web_catcher/pull/6) closed unmerged.
+- 최신 사용자 공개 대시보드 read-only 검증 [39139325141](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39139325141) SUCCESS: HTTP200, 12.283초, 3 charts/API1. API JSON 분석 결과 `compressed_size_unknown`에서 **`decoded_too_large`로 개선**, 여전히 `json_structure=null`/차트↔API 0. 데이터 디코딩 후 크기가 128KiB를 초과. 필터 클릭을 안 했으므로 실제 변경/계보 미검증. 실사이트 시험용 PR #8 closed unmerged.
+- 완전한 브라우저 내부 decompression 메모리 하드 한도 아니므로 압축 폭탄에 대한 절대 메모리 보장 불가. 사용자 동의 없는 cap 상향 금지, SSRF 격리 없는 서버 배포 금지. 원본 스크린샷/세션/응답 본문/GitHub 실사이트 자료 업로드 없음.
+- 근거: `docs/STEP3_COMPRESSED_JSON_DECODED_BOUND_2026-10-18.md`. 다음 `ㄱ`: **새 단위**로 대용량 승인 JSON에서 안전하게 필드/시계열 구조를 얻는 다른 방법 설계 또는 사용자 Windows Record 최종 시험. 이미 검증된 수집/압축 상태 로직 반복 개발 금지.
+
+---
+
 # 2026-10-18 23:46 KST — p3 실사이트 읽기 전용 Record 확인 인수
 
 - 이전 마지막 `ㄱ`: PR #4 병합 이후 사용자가 실사이트 검증을 요청. 기존 소스를 재개발하지 않고 임시 브랜치 `probe/p3-live-readonly-20261018`에서 실제 웹사이트 1회 관찰.
