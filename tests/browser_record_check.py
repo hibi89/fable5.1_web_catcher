@@ -23,9 +23,6 @@ from tests.fixture_server import FixtureHandler
 
 
 class RecordHandler(FixtureHandler):
-    # Chunked transfer encoding requires an HTTP/1.1 response.
-    protocol_version = 'HTTP/1.1'
-
     def do_GET(self):
         path = self.path.split('?', 1)[0]
         if path in ('/cross-api-chunked', '/cross-api-chunked-large'):
@@ -34,6 +31,9 @@ class RecordHandler(FixtureHandler):
                     else 'S' * 140000)
             obj = json.dumps({'points': [{'date': 'PRIVATE_DATE', 'value': 9,
                                            'note': note}]}).encode()
+            # Only this particular response uses HTTP/1.1 chunk framing.
+            # The rest of the fixture keeps its original HTTP/1.0 lifecycle.
+            self.protocol_version = 'HTTP/1.1'
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.send_header('Transfer-Encoding', 'chunked')
