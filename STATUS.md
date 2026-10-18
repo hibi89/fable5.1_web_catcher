@@ -1,3 +1,15 @@
+# 2026-10-19 00:14 KST — p3 압축·무길이 JSON 디코딩 크기 관찰 완료 (PR #7 main)
+
+- **PR #7 병합 성공**: `4fe091451e3278aab8477abb1913144c9b3d00e5`, 기능 검증 SHA `c9e735b0d8ac79fc762f533577e582d8c780c04c`.
+- `scanner/cdp_decoded_size.py`가 브라우저 CDP `Network.dataReceived.dataLength` 숫자만 추적하여, 승인 main frame origin의 **압축 해제 후 크기 ≤128KiB**임을 확인한 응답에 한해 기존 JSON 자료형 구조 분석. 큰 압축 JSON은 본문을 읽지 않는다. Request URL+메서드 중복/이벤트 불완전/기타 불확실성은 fail-closed. Step 1/2 변경 없음.
+- 공식 실험 [39138406625](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39138406625): gzip 압축 171 B → 디코딩 1,171 B 분석, 압축 461 B → 디코딩 400,015 B 분석 금지. `streamResourceContent`는 빠른 요청에서 실패하여 폐기([실험 PR #6](https://github.com/hibi89/fable5.1_web_catcher/pull/6) 미병합 종료).
+- **최종 CI Windows 67/67 PASS** [39139094290](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39139094290), **실제 headed Chromium 22/22 PASS + 공개 smoke 4/4 PASS** [39139094270](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39139094270). 신규 CDP setup 순서 회귀 및 마스킹 fixture 경로는 수정 후 재검증.
+- **실제 사용자 공개 데모사이트** 읽기 전용 [39139325141](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39139325141) SUCCESS: 12.283초, HTTP200, 차트 3/API1, JSON 상태 `compressed_size_unknown`(전)→**`decoded_too_large`(후)**. 즉 API 디코딩 크기가 128KiB 초과이므로 원문/구조 분석하지 않음. JSON shape0/chart-api0, 사용자 클릭0. 실사이트 차트 변화/라인리지 미검증 유지.
+- 검증 전용 PR #8 [closed unmerged](https://github.com/hibi89/fable5.1_web_catcher/pull/8). 사용자 실사이트 원문/토큰/스크린샷/전체 결과 저장하지 않고 aggregate만 수집. Chromium의 브라우저 내부 압축 해제 자체에 **절대 메모리 제한은 걸지 못함**. 사용자 승인 없이 128KiB 상향·추가 요청·임의 연결 생성 금지.
+- 상세 `docs/STEP3_COMPRESSED_JSON_DECODED_BOUND_2026-10-18.md`. 다음 단위: 대용량 JSON의 안전한 필드 정보 확보 대안 또는 사용자 최신 Windows 수동 Record 검증.
+
+---
+
 # 2026-10-18 23:46 KST — p3 실제 대시보드 읽기 전용 Record 검증 1단위 완료
 
 - 사용자 지정 URL `https://daily-dashboard-ldh-1013.clevertide128.chatgpt.site/#v-dash`를 최신 main의 PR #3/#4 기능을 사용하여 GitHub Ubuntu 24.04 headed Chromium/Xvfb에서 **실제 접근**. [Actions run 39137433372](https://github.com/hibi89/fable5.1_web_catcher/actions/runs/39137433372) SUCCESS.
