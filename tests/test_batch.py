@@ -170,3 +170,35 @@ def test_batch_runtime_sequential_and_no_automatic_llm(tmp_path):
     assert len(calls)==2
     assert all(runtime and wait==3 for url,runtime,wait,headed in calls)
     assert (tmp_path/"batch"/"targets"/"002-site"/"report.md").exists()
+
+
+def test_batch_redacted_api_urls_remain_usable_for_contracts(tmp_path):
+    """Batch must anonymize sites without destroying observed API structure."""
+    from scanner.contracts import run_contracts
+    import jsonschema
+    listing=tmp_path/"urls.txt"
+    listing.write_text("https://example.private/one\nhttps://example.private/two\n",encoding="utf-8")
+    def fake(url,out,timeout,**kwargs):
+        r=blank_result(url)
+        r["api"]["endpoints"]=[{
+            "id":"api-0001", "method":"GET",
+            "url":"https://api.internal.example/api/v1/items/123?api_key=SECRET_LEAK",
+            "status":200,"content_type":"application/json",
+            "response_body_analysis":"structure_only",
+            "json_structure":{"items":[{"name":"string","count":"number"}]}
+        }]
+        write_reports(r,out)
+        return 0
+    output=tmp_path/"batch"
+    assert run_batch(listing,output,scan_fn=fake,sleep=lambda _:None)==0
+    one=output/"targets"/"001-site"/"result.json"
+    clean=json.loads(one.read_text(encoding="utf-8"))
+    u=clean["api"]["endpoints"][0]["url"]
+    assert u.startswith("https://batch-") and u.endswith("/api/v1/items/:id")
+    assert "api.internal.example" not in json.dumps(clean)
+    assert "SECRET_LEAK" not in json.dumps(clean)
+    assert run_contracts(one,tmp_path/"contracts")==0
+    schema_path=tmp_path/"contracts"/"schemas"/"endpoint-001.schema.json"
+    assert schema_path.is_file()
+    jsonschema.Draft202012Validator.check_schema(
+        json.loads(schema_path.read_text(encoding="utf-8")))
