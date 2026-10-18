@@ -37,7 +37,7 @@ def test_dashboard_structural_diagnostic(tmp_path: Path):
             try:
                 page = context.new_page()
                 response = page.goto(URL, wait_until="domcontentloaded", timeout=18000)
-                page.wait_for_timeout(1000)
+                page.wait_for_timeout(2000)
                 inventory = page.evaluate("""() => ({
                     hash: location.hash,
                     totalSvg: document.querySelectorAll('svg').length,
@@ -49,6 +49,35 @@ def test_dashboard_structural_diagnostic(tmp_path: Path):
                     ).length,
                     tables: document.querySelectorAll('table').length,
                     buttons: document.querySelectorAll('button').length,
+                    svgDetails: Array.from(document.querySelectorAll('svg')).slice(0, 12).map(e => ({
+                       width: Math.round(e.getBoundingClientRect().width),
+                       height: Math.round(e.getBoundingClientRect().height),
+                       children: e.children.length,
+                       paths: e.querySelectorAll('path').length,
+                       lines: e.querySelectorAll('line').length,
+                       rects: e.querySelectorAll('rect').length
+                    })),
+                    inlineSizedDivs: Array.from(document.querySelectorAll('div[style]')).filter(e => {
+                       const st = e.getAttribute('style') || '';
+                       return /(?:height|width):/.test(st);
+                    }).length,
+                    namedCharts: ['주별 게시물 수','게시 시간대별 반응 중앙값','브랜드별 반응 중앙값'].map(title => {
+                       const e = Array.from(document.querySelectorAll('h1,h2,h3,h4,div,span,p'))
+                           .find(n => n.children.length < 2 && (n.textContent || '').trim() === title);
+                       if (!e) return {found:false};
+                       const host = e.parentElement && e.parentElement.parentElement;
+                       const lower = host && host.parentElement;
+                       return {
+                         found: true, tag:host?.tagName?.toLowerCase(),
+                         childCount:host?.children?.length,
+                         svgCount:lower?.querySelectorAll('svg')?.length,
+                         canvasCount:lower?.querySelectorAll('canvas')?.length,
+                         inlineSizedCount:lower?.querySelectorAll('div[style]')?.length,
+                         tagHistogram:lower? Array.from(lower.querySelectorAll('*')).slice(0,150).reduce((acc,node)=>{
+                             const tag=node.tagName.toLowerCase();acc[tag]=(acc[tag]||0)+1;return acc;
+                           },{}) : {}
+                       };
+                    }),
                     bodyExists: !!document.body
                 })""")
                 print("BROWSER_DOM_INVENTORY", json.dumps({
